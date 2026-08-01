@@ -26,18 +26,20 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Production-minded: handle loading, empty, error, and rate-limit states.
 - Any AI usage must be documented (see the AI usage rule below).
 
-## AI 利用記録のルール（必須）
+## AI Usage Log (required)
 
-**1 工程（プロセス）が完了するたびに、AI をどのように利用したかをドキュメントへ追記すること。**
+**Every time a process completes, append a record of how AI was used.**
 
-- 追記先は 2 ファイル。**両方を必ず同時に更新する**：
-  - `docs/AI-USAGE.ja.md`（日本語・提出用）
-  - `docs/AI-USAGE.en.md`（英語・同一内容）
-- 記載必須項目：工程番号／日付／使用した AI ツール／AI に任せた範囲／人間が判断した範囲／レビュー方法。
-- 更新のタイミングは **その工程のコミット前**。後からまとめて書かない。
-- AI の出力をそのまま採用したか、修正したかを正直に記載する。
+- Two files, **always updated together**:
+  - `docs/AI-USAGE.ja.md` — Japanese, submission-facing
+  - `docs/AI-USAGE.en.md` — English, identical content
+- Required fields: process number / date / AI tool / what AI did / what the human decided / how it was reviewed.
+- Write it **before that process is committed**. Never backfill in bulk.
+- State honestly whether AI output was taken as-is or modified.
 
-> 課題要件：「AI を利用した場合は、README に使用方法をまとめること」。`README.md` は上記 2 ファイルを参照する形で運用する。
+> The assignment requires AI usage to be summarised in the README. `README.md` satisfies this by linking to the two files above.
+>
+> Note: these AGENTS.md rules are in English for the agent's benefit. Submission-facing docs (`README.md`, `docs/AI-USAGE.ja.md`) stay in their intended language.
 
 ## Agent Directives
 - Run `npm test`, `npm run lint`, and `npm run typecheck` after every significant change.
