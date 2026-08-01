@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# but the template must be committed
+!.env.example
+
+# test artifacts
+/coverage
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache

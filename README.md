@@ -53,6 +53,17 @@ Then open http://localhost:3000.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Run the test suite once |
 | `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Tests with a coverage report |
+| `npm run test:e2e` | Playwright end-to-end tests |
+| `npm run test:a11y` | Accessibility checks (axe) |
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System shape, directory layout, key decisions, rejected alternatives |
+| [`AGENTS.md`](./AGENTS.md) | Coding standards and project rules |
+| [`.planning/`](./.planning/) | Requirements, roadmap, and project state |
 
 ## Project Structure
 
