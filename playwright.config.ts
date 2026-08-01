@@ -17,7 +17,12 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npm run build && npx next start --port ${PORT}`,
+    // CI builds once in its own job and shares `.next` as an artifact, so the test jobs
+    // serve it directly. Locally there is no artifact, so build first.
+    command:
+      process.env.PLAYWRIGHT_PREBUILT === "1"
+        ? `npx next start --port ${PORT}`
+        : `npm run build && npx next start --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

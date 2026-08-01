@@ -13,8 +13,37 @@ permissions:
   contents: read
 
 jobs:
+  # Built once and shared. The e2e and a11y jobs consume this artifact rather than
+  # each running their own `next build` — three identical builds per run otherwise.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          # .next/cache is local build cache — large and useless to downstream jobs.
+          path: |
+            .next
+            !.next/cache
+          retention-days: 1
+          include-hidden-files: true
+
   quality:
-    name: Lint, typecheck, test, build
+    name: Lint, typecheck, test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,12 +64,10 @@ jobs:
       - name: Unit and component tests
         run: npm run test:coverage
 
-      - name: Build
-        run: npm run build
-
   e2e:
     name: End-to-end (mocked GitHub API)
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v4
 
@@ -51,13 +78,22 @@ jobs:
 
       - run: npm ci
 
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      # The GitHub API is intercepted inside the specs. CI runners share IPs and are
-      # aggressively rate-limited, so a live API would make this job flaky.
+      # PLAYWRIGHT_PREBUILT skips the build in playwright.config.ts and serves the
+      # artifact directly. The GitHub API is intercepted inside the specs — CI runners
+      # share IPs and are aggressively rate-limited, so a live API would make this flaky.
       - name: Run Playwright
         run: npm run test:e2e
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
@@ -69,6 +105,7 @@ jobs:
   a11y:
     name: Accessibility (axe)
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - uses: actions/checkout@v4
 
@@ -79,11 +116,19 @@ jobs:
 
       - run: npm ci
 
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: Run accessibility checks
         run: npm run test:a11y
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
 
   audit:
     name: Dependency audit
