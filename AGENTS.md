@@ -111,14 +111,49 @@ Never render a raw error object or stack trace to the user.
 
 ## AI usage log (required)
 
-**Every time a process completes, append a record of how AI was used.**
+**Every time a process completes, append a record of how AI was used — before committing that process.**
 
-- Two files, **always updated together**:
-  - `docs/AI-USAGE.ja.md` — Japanese, submission-facing
-  - `docs/AI-USAGE.en.md` — English, identical content
-- Required fields: process number / date / AI tool / what AI did / what the human decided / how it was reviewed.
-- Write it **before that process is committed**. Never backfill in bulk.
-- State honestly whether AI output was taken as-is or modified.
+**Who this is for:** an interviewing engineer reviewing this submission. They are assessing judgement, not typing speed. A log that only says *what happened* proves nothing; a log that says *why* is the actual evidence. Write for someone who will ask "why did you do it that way?" and never gets to hear a verbal answer.
+
+Two files, **always updated together**:
+- `docs/AI-USAGE.ja.md` — Japanese, submission-facing
+- `docs/AI-USAGE.en.md` — English, identical content
+
+### Required fields
+
+| Field | What it must contain |
+| --- | --- |
+| Process number & date | Sequential; the date the work happened |
+| AI tool | Model/tool used, including any sub-agents |
+| **What** AI did | Concrete actions — files written, commands run, decisions drafted |
+| **Why** | The reasoning behind the approach. What alternatives were considered and **rejected, with the reason**. This field is not optional. |
+| What the human decided | Which calls were the human's, not the AI's — especially where the human overrode the AI |
+| How it was reviewed | The specific commands run and their result. Not "checked it" |
+| Taken as-is or modified | Honestly. If AI output was corrected, say what was wrong |
+
+### Entry template
+
+```markdown
+## Process N: [Title]
+
+- **Date:** YYYY-MM-DD
+- **Tool:** [model / sub-agents]
+- **Delegated to AI:** [concrete actions]
+- **Why this approach:** [reasoning; alternatives considered and why they were rejected]
+- **Human decisions:** [what the human chose, and where they overrode the AI]
+- **Review:** [commands run + results]
+- **Taken as-is vs modified:** [honest account]
+```
+
+### Before committing a process, check
+
+1. Could a reviewer answer "why did they build it this way?" from this entry alone?
+2. Is every rejected alternative recorded **with its reason**, not just the chosen path?
+3. Are the human's decisions distinguishable from the AI's?
+4. Does the review line name actual commands and outcomes?
+5. Do both language files say the same thing?
+
+If any answer is no, the entry is not finished.
 
 > The assignment requires AI usage to be summarised in the README. `README.md` satisfies this by linking to the two files above.
 
@@ -149,4 +184,4 @@ Rules for agent use here:
 - Expose a GitHub token to the client, or commit one.
 - Weaken TypeScript strictness or disable lint rules to make an error go away.
 - Mark work complete without running the verification commands.
-- Skip the AI usage log for a process.
+- Skip the AI usage log for a process, or write one that records *what* happened without *why*.

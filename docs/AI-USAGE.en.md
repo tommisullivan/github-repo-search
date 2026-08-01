@@ -4,10 +4,14 @@ A per-process record of how AI was used on this project. The Japanese version is
 
 ## Rules
 
-- **Every time a process is completed, append to both this file and the Japanese version.** Update them before finishing the process and committing.
-- Each entry must include: process number, date, AI tool used, what was delegated to AI, what the human decided, and how it was reviewed.
-- Record honestly whether AI output was accepted as-is or modified.
-- Write the entry during the process, not retroactively in bulk.
+**Who this log is for:** the engineers reviewing this submission. They are assessing judgement. An entry that records only *what happened* proves nothing — the reasoning is the evidence.
+
+- **Every time a process completes, append to both this file and the Japanese version**, before that process is committed.
+- Each entry must include: process number, date, AI tool, what was delegated to AI, **why that approach was taken including alternatives rejected and the reason**, what the human decided, and how it was reviewed (specific commands and results).
+- Record honestly whether AI output was accepted as-is or corrected.
+- Write the entry during the process, never retroactively in bulk.
+
+An entry is finished only when a reviewer could answer "why did they build it this way?" from it alone.
 
 ---
 
