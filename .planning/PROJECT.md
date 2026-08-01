@@ -70,6 +70,10 @@ A reviewer can search for a repository, open its detail page, and find the code 
 | Vitest over Jest | Already in place, ~0.9s suite, native ESM/TS. No migration needed. | ✓ Good |
 | Full CI gate, no DAST | Lint/typecheck/unit/E2E/build/SAST/audit/secrets/a11y are proportionate; DAST has no surface to scan here. | — Pending |
 | `AGENTS.md` holds project rules, `CLAUDE.md` imports it | Portable across coding agents; Claude reads it via the one-line import. | ✓ Good |
+| Japanese UI, English code | Reviewers are Japanese engineers and the brief is Japanese, so user-facing strings are Japanese. Code stays English so the repo is readable by any engineer and matches common practice in Japanese teams. | — Pending |
+| Observability free and local only | No paid SaaS and no vendor account. Structured stdout logging is the default so the app still runs with zero services; anything heavier is opt-in self-hosted OSS. | — Pending |
+| Rate-limit headroom is the key signal | The app's dominant failure mode is quota exhaustion, not a code fault. `x-ratelimit-remaining` is logged on every call so degradation is visible before failure. | — Pending |
+| Never retry a rate-limited request | Retrying spends the quota that is already gone and slows recovery. The failure most likely to tempt a retry is the one where retrying is harmful. | — Pending |
 
 ## Evolution
 

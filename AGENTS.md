@@ -74,6 +74,13 @@ npm run test:a11y  # axe accessibility checks
 - Use `next/link` for navigation — never `window.location`.
 - URL is state: the search keyword and page belong in the query string, so results are shareable, refreshable, and backable.
 
+### Language: Japanese UI, English code
+
+- **All user-facing strings are Japanese** — labels, placeholders, buttons, empty states, error messages, page titles, and `aria-label` values. The reviewers are Japanese engineers and the brief is Japanese.
+- **All code is English** — identifiers, types, file names, comments, commit messages, and test names.
+- Keep user-facing strings out of deeply nested components where a reviewer cannot find them. Colocate them with the component that renders them.
+- Error messages must be actionable in Japanese, not translated jargon. A rate-limit message says when to retry.
+
 ### Naming & layout
 ```
 src/app/            routes, layouts, loading/error boundaries
@@ -90,6 +97,23 @@ e2e/                Playwright specs — *.spec.ts for E2E, *.a11y.spec.ts for a
 Every data-driven view handles all of: **loading**, **empty results**, **network failure**, **GitHub rate limit (403/429)**, and **not found (404)**. Use App Router `loading.tsx` and `error.tsx` rather than hand-rolled flags where it fits.
 
 Never render a raw error object or stack trace to the user.
+
+### Resilience and logging
+
+Policy lives in [`docs/OPERATIONS.md`](docs/OPERATIONS.md); the rules that bind code:
+
+- Every GitHub request carries a **timeout**. A bare `fetch()` has none and will hang indefinitely.
+- **Never retry a rate-limited request** (403/429) — it consumes the exhausted quota and slows recovery. Respect `x-ratelimit-reset`.
+- Log every GitHub call as structured JSON including `x-ratelimit-remaining`. Rate-limit headroom is this app's key operational signal.
+- Never log the token, the `Authorization` header, or full response bodies.
+
+### Security
+
+Full model in [`docs/SECURITY.md`](docs/SECURITY.md); the rules that bind code:
+
+- `dangerouslySetInnerHTML` is **banned**. There is no legitimate use here.
+- Build URLs with `URLSearchParams` and `encodeURIComponent` — never string concatenation.
+- `images.remotePatterns` is an explicit allowlist scoped to GitHub's avatar host. Never a wildcard.
 
 ## GitHub API rules
 

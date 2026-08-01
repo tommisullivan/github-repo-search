@@ -39,6 +39,22 @@
 - [ ] **UX-06**: Keyboard operable with labelled controls and correct heading structure
 - [ ] **UX-07**: Layout works on mobile and desktop widths
 
+### Observability & Resilience
+
+- [ ] **OBS-01**: Every GitHub call is logged as structured JSON including status, duration, and `x-ratelimit-remaining` / `x-ratelimit-reset`
+- [ ] **OBS-02**: Every GitHub request carries a timeout; rate-limited and 4xx responses are never retried, transient network faults retry at most once
+- [ ] **OBS-03**: Tokens, `Authorization` headers, and full response bodies are never logged
+
+### Security
+
+- [ ] **SEC-01**: Security response headers configured, including a Content-Security-Policy that does not rely on `unsafe-inline`
+- [ ] **SEC-02**: `images.remotePatterns` allowlists GitHub's avatar host specifically, never a wildcard
+- [ ] **SEC-03**: URLs are built with `URLSearchParams` / `encodeURIComponent`; `dangerouslySetInnerHTML` appears nowhere
+
+### Localisation
+
+- [ ] **I18N-01**: All user-facing strings are Japanese, including `aria-label` values; all code, comments, and commits are English
+
 ### Testing
 
 - [ ] **TEST-01**: Unit tests for the GitHub client including every error-mapping branch
@@ -59,6 +75,9 @@
 - [ ] **DOC-01**: README covers setup, the optional token, and the reasoning behind key decisions
 - [ ] **DOC-02**: AI usage logged per process in Japanese and English
 - [x] **DOC-03**: `docs/ARCHITECTURE.md` explains structure, data flow, and rejected alternatives
+- [x] **DOC-04**: `docs/OPERATIONS.md` records the observability and resilience policy
+- [x] **DOC-05**: `docs/SECURITY.md` records the threat model and security decisions
+- [x] **DOC-06**: `docs/TESTING.md` records the testing strategy and CI gate
 
 ## v2 Requirements
 
@@ -96,6 +115,16 @@ Deferred. Tracked but not in the current roadmap.
 | CI-03 | Phase 0 | Complete |
 | CI-04 | Phase 0 | Complete |
 | CI-05 | Phase 0 | Complete |
+| DOC-04 | Phase 0 | Complete |
+| DOC-05 | Phase 0 | Complete |
+| DOC-06 | Phase 0 | Complete |
+| OBS-01 | Phase 1 | Pending |
+| OBS-02 | Phase 1 | Pending |
+| OBS-03 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| I18N-01 | Phase 2 | Pending |
+| SEC-02 | Phase 3 | Pending |
+| SEC-01 | Phase 4 | Pending |
 | API-01 | Phase 1 | Pending |
 | API-02 | Phase 1 | Pending |
 | API-03 | Phase 1 | Pending |
@@ -126,19 +155,19 @@ Deferred. Tracked but not in the current roadmap.
 | DOC-02 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 34 total
-- Mapped to phases: 34
+- v1 requirements: 44 total
+- Mapped to phases: 44
 - Unmapped: 0 ✓
 
 **Phase distribution:**
 
 | Phase | Requirements | Count |
 |-------|--------------|-------|
-| Phase 0 — Foundation & CI | DOC-03, CI-01..CI-05 | 6 |
-| Phase 1 — GitHub API Client | API-01..API-05, TEST-01 | 6 |
-| Phase 2 — Search Experience | SRCH-01..SRCH-05, UX-01..UX-04 | 9 |
-| Phase 3 — Repository Detail Page | DTL-01..DTL-05, UX-05, TEST-02 | 7 |
-| Phase 4 — Quality Gate & Submission Readiness | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02 | 6 |
+| Phase 0 — Foundation & CI | DOC-03..DOC-06, CI-01..CI-05 | 9 |
+| Phase 1 — GitHub API Client | API-01..API-05, TEST-01, OBS-01..OBS-03, SEC-03 | 10 |
+| Phase 2 — Search Experience | SRCH-01..SRCH-05, UX-01..UX-04, I18N-01 | 10 |
+| Phase 3 — Repository Detail Page | DTL-01..DTL-05, UX-05, TEST-02, SEC-02 | 8 |
+| Phase 4 — Quality Gate & Submission Readiness | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, SEC-01 | 7 |
 
 ---
 *Requirements defined: 2026-08-01*

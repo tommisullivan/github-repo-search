@@ -62,8 +62,18 @@ Then open http://localhost:3000.
 | Document | Contents |
 | --- | --- |
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System shape, directory layout, key decisions, rejected alternatives |
+| [`docs/TESTING.md`](./docs/TESTING.md) | Test layers, mocking boundary, failure modes, CI gate |
+| [`docs/OPERATIONS.md`](./docs/OPERATIONS.md) | Observability, rate-limit monitoring, timeout and retry policy |
+| [`docs/SECURITY.md`](./docs/SECURITY.md) | Threat model, token handling, response headers, privacy |
 | [`AGENTS.md`](./AGENTS.md) | Coding standards and project rules |
 | [`.planning/`](./.planning/) | Requirements, roadmap, and project state |
+
+## Scope notes
+
+- **Interface language is Japanese**; code, comments, and commits are English.
+- **Browser support:** current evergreen Chrome, Firefox, Safari, and Edge. CI runs Playwright on Chromium only — a cross-browser matrix would cost CI time without a reviewed benefit, and the app uses no browser-specific APIs.
+- **Performance:** the app ships no client-side data fetching and one small interactive island, so the budget is simply that search and detail remain server-rendered and the client bundle stays close to the framework baseline.
+- **Privacy:** no cookies, no analytics, no accounts, nothing stored. See [`docs/SECURITY.md`](./docs/SECURITY.md).
 
 ## Project Structure
 
