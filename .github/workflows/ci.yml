@@ -175,3 +175,31 @@ jobs:
           queries: security-and-quality
 
       - uses: github/codeql-action/analyze@v3
+
+  # Single aggregate check. Make ONLY this one required in branch protection —
+  # it fails unless every job above succeeded, so adding or renaming a job never
+  # requires touching repo settings. A required check that no longer exists would
+  # otherwise block every PR forever.
+  gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [build, quality, e2e, a11y, audit, secrets, codeql]
+    steps:
+      - name: Verify every job succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          failed=0
+          for result in $RESULTS; do
+            # Anything other than success — failure, cancelled, or skipped — blocks the PR.
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::One or more required checks did not succeed."
+            exit 1
+          fi
+          echo "All checks passed."

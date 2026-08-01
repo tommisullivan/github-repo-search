@@ -252,16 +252,37 @@ Coverage is a floor for spotting untested branches, not a goal. 100% coverage of
 
 | Job | Enforces |
 | --- | --- |
-| `quality` | `npm run lint` → `npm run typecheck` → `npm run test:coverage` → `npm run build`, in that order |
-| `e2e` | `npm run test:e2e` on chromium against a production build; uploads `playwright-report/` as an artifact (7-day retention) even on failure |
+| `build` | `npm run build` once, uploading `.next` as an artifact for the browser jobs |
+| `quality` | `npm run lint` → `npm run typecheck` → `npm run test:coverage` |
+| `e2e` | `npm run test:e2e` on chromium against the shared build; uploads `playwright-report/` as an artifact (7-day retention) even on failure |
 | `a11y` | `npm run test:a11y` — the axe specs, isolated |
 | `audit` | `npm audit --audit-level=high`; the tree is held at zero advisories via `overrides` in `package.json` |
 | `secrets` | gitleaks over full history (`fetch-depth: 0`) |
 | `codeql` | CodeQL SAST, `javascript-typescript`, `security-and-quality` query pack |
+| `gate` | Aggregates all of the above — fails unless every one succeeded |
+
+The app is built **once** and shared. `e2e` and `a11y` download the artifact and set `PLAYWRIGHT_PREBUILT=1`, which tells `playwright.config.ts` to serve it rather than rebuild. Locally there is no artifact, so the same config builds first.
 
 Every job pins Node from `.nvmrc` via `node-version-file` and installs with `npm ci`, so CI and local runs use the same Node 24.18.1 and the same locked tree.
 
-In CI, Playwright behaves differently on purpose: `forbidOnly` rejects a stray `test.only`, failed tests retry once, traces are captured on first retry, and `reuseExistingServer` is disabled so every run builds and serves fresh.
+In CI, Playwright behaves differently on purpose: `forbidOnly` rejects a stray `test.only`, failed tests retry once, traces are captured on first retry, and `reuseExistingServer` is disabled so every run serves fresh.
+
+### Blocking merges
+
+A workflow cannot block a pull request on its own — that requires branch protection, which is a repository setting rather than a file. The `gate` job exists to make that setting a one-liner: mark **only `CI Gate`** as required, and it fails unless every other job succeeded. Adding, renaming, or removing a job then never requires touching repository settings, which matters because a required check that no longer exists blocks every PR indefinitely.
+
+Once a remote exists:
+
+```bash
+gh api -X PUT repos/:owner/:repo/branches/main/protection \
+  -f 'required_status_checks[strict]=true' \
+  -f 'required_status_checks[contexts][]=CI Gate' \
+  -f 'enforce_admins=true' \
+  -f 'required_pull_request_reviews[required_approving_review_count]=0' \
+  -F 'restrictions=null'
+```
+
+`strict` requires the branch to be up to date with its base before merging. Anything other than success — failure, cancellation, or a skipped job — blocks.
 
 **Honest caveat:** this workflow has **never executed**. No GitHub remote is configured for this repository yet — that is deliberate and recorded in [`AGENTS.md`](../AGENTS.md) and Phase 0 of the roadmap. Every script the workflow invokes (`lint`, `typecheck`, `test:coverage`, `test:e2e`, `test:a11y`, `audit`, `build`) has been run locally and passes. The jobs are *defined and locally verified*, not *observed green in CI*. The first push will confirm them.
 
