@@ -15,7 +15,13 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.test.{ts,tsx}", "src/app/layout.tsx", "**/*.d.ts"],
+      // Must cover every pattern in `include` above — a *.spec file left out here would be
+      // collected as a test AND counted as covered source, inflating the number.
+      exclude: [
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "src/app/layout.tsx",
+        "**/*.d.ts",
+      ],
       // Raised as real code lands — see .planning/ROADMAP.md Phase 4 (TEST-04).
       thresholds: { lines: 70, functions: 70, branches: 70, statements: 70 },
     },

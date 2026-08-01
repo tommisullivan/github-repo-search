@@ -38,9 +38,14 @@ npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
 npm test           # Vitest, single run
 npm run test:watch # Vitest, watch mode
+npm run test:coverage # Vitest with coverage — this is what CI gates on
+npm run test:e2e   # Playwright end-to-end
+npm run test:a11y  # axe accessibility checks
 ```
 
 **Run `npm test`, `npm run lint`, and `npm run typecheck` after every significant change.** Never claim work is done without running them.
+
+**Before finishing a phase, also run `npm run test:coverage`, `npm run test:e2e`, and `npm run test:a11y`** — `npm test` alone does not exercise the coverage threshold that fails CI's `quality` job.
 
 ## Tech stack
 
@@ -75,7 +80,8 @@ src/app/            routes, layouts, loading/error boundaries
 src/components/     reusable UI
 src/lib/            data fetching, GitHub client, pure helpers
 src/types/          shared type definitions
-src/**/*.test.tsx   tests, colocated next to what they test
+src/**/*.test.tsx   unit and component tests, colocated next to what they test
+e2e/                Playwright specs — *.spec.ts for E2E, *.a11y.spec.ts for axe
 ```
 - Components: `PascalCase.tsx`. Helpers and hooks: `camelCase.ts`. Route folders: lowercase.
 - One exported component per file. Co-locate a component's test beside it.
@@ -99,7 +105,7 @@ Never render a raw error object or stack trace to the user.
 
 - Test behaviour a user can observe, not implementation details. Query by role and accessible name; avoid snapshot-only tests.
 - Mock the network at the boundary — never let tests hit the real GitHub API.
-- Every feature ships with tests for the happy path **and** at least one failure path (empty results or rate limit).
+- Every feature ships with tests for the happy path **and** its failure paths. The five modes that must be covered across the app: rate limit (403/429), not found (404), validation (422), network error, and empty results. One failure path per feature is the floor, not the target — see [`docs/TESTING.md`](docs/TESTING.md).
 - Tests live beside their subject as `*.test.ts(x)` under `src/`.
 
 ## Git & commits

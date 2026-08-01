@@ -68,11 +68,14 @@ Then open http://localhost:3000.
 ## Project Structure
 
 ```
-src/app/            App Router routes and layouts
-src/app/page.tsx    Home page (placeholder)
-src/app/*.test.tsx  Colocated component tests
-vitest.config.mts   Test runner config
-vitest.setup.ts     jest-dom matchers + auto cleanup
+src/app/              App Router routes and layouts
+src/app/page.tsx      Home page (placeholder)
+src/app/*.test.tsx    Colocated unit and component tests
+e2e/                  Playwright specs — E2E and axe accessibility
+vitest.config.mts     Unit/component test config
+vitest.setup.ts       jest-dom matchers + auto cleanup
+playwright.config.ts  E2E and a11y run config
+.github/workflows/    CI quality gate
 ```
 
 ## AI Usage / AI 利用について
