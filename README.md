@@ -73,7 +73,9 @@ AI usage is logged per process, in both languages:
 
 **Rule:** every completed process appends an entry to *both* files before it is committed — process number, date, tool, what AI did, what the human decided, and how it was reviewed.
 
-So far: Process 1 (spec comprehension + base scaffold) is done. Architecture has deliberately not been designed yet.
+So far: Process 1 (spec comprehension + base scaffold) and Process 2 (project rules + AI documentation workflow) are done. Architecture has deliberately not been designed yet.
+
+Project conventions and constraints live in [`AGENTS.md`](./AGENTS.md), which AI coding tools load automatically at the start of every session.
 
 ## Notes
 

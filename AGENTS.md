@@ -6,27 +6,110 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # github-repo-search
 
-## Build & Test
-- Dev server: `npm run dev`
-- Build: `npm run build`
-- Lint: `npm run lint`
-- Typecheck: `npm run typecheck`
-- Test: `npm test` (watch: `npm run test:watch`)
+Rules for any agent or developer working in this repo. Read this before writing code. These rules are in English for the agent's benefit; submission-facing docs (`README.md`, `docs/AI-USAGE.ja.md`) stay in their intended language.
 
-## Tech Stack
-- Next.js 16 (App Router), React 19, TypeScript strict
+## What this project is
+
+A GitHub repository search app, built as an engineering selection task (課題). A user types a keyword, the app searches the GitHub API, lists matching repositories, and shows a selected repository's details on its own route.
+
+**Reviewers judge this as production code.** Design is explicitly *not* graded — usability, clarity, correctness, and test coverage are.
+
+## Assignment constraints (non-negotiable)
+
+| Constraint | Detail |
+| --- | --- |
+| Framework | Next.js **v16+**. Do not downgrade. |
+| Router | **App Router** only. Never add `pages/`. |
+| Detail view | Must be a **page with its own route**. A modal is an explicit fail. |
+| Required fields | name, owner avatar, language, stars, watchers, forks, open issues |
+| Tests | Test code ships alongside features, not after. |
+| Quality | Written as if going to production. |
+| AI disclosure | Every process logged — see [AI usage log](#ai-usage-log-required). |
+
+If a change would break any row above, stop and raise it rather than working around it.
+
+## Build & test
+
+```bash
+nvm use            # Node 20.20.1 — the default Node 18 cannot run Next.js 16
+npm run dev        # dev server
+npm run build      # production build
+npm run lint       # ESLint
+npm run typecheck  # tsc --noEmit
+npm test           # Vitest, single run
+npm run test:watch # Vitest, watch mode
+```
+
+**Run `npm test`, `npm run lint`, and `npm run typecheck` after every significant change.** Never claim work is done without running them.
+
+## Tech stack
+
+- Next.js 16.2.12 (App Router), React 19, TypeScript strict
 - Tailwind CSS v4
-- Vitest + React Testing Library (jsdom)
-- Node 20.20.1 (see `.nvmrc`)
+- Vitest 4 + React Testing Library (jsdom)
+- Node 20.20.1 (`.nvmrc`)
 
-## Assignment Constraints (non-negotiable)
-- Next.js v16+ and the App Router. Do not add the Pages Router.
-- Repository detail must be a **page** (its own route), never a modal.
-- Ship test code alongside features.
-- Production-minded: handle loading, empty, error, and rate-limit states.
-- Any AI usage must be documented (see the AI usage rule below).
+### Dependency notes worth remembering
 
-## AI Usage Log (required)
+- `next@16.2.12` pins `postcss@8.4.31` and `sharp@0.34.5`, both of which carry advisories. `package.json` `overrides` raise them to patched versions, matching what upstream does in the unreleased 16.3 previews. **Keep `npm audit` at 0 vulnerabilities.**
+- npm `overrides` do **not** apply to an already-installed tree. If `npm ls` shows `invalid: ... overridden`, delete `node_modules` and `package-lock.json` and reinstall.
+- Adding dependencies is a decision, not a detail. Prefer the platform (`fetch`, Server Components, `URLSearchParams`) over a library. shadcn/ui is permitted by the brief but optional.
+
+## Coding standards
+
+### TypeScript
+- `strict` is on and stays on. No `any`, no `@ts-ignore`, no non-null `!` to silence the compiler — model the type properly.
+- Type API responses explicitly in `src/types/`. Do not let `unknown` GitHub JSON leak into components.
+- Prefer `type` aliases for props and API shapes; reserve `interface` for extension.
+
+### React / Next.js
+- **Server Components by default.** Add `"use client"` only where interactivity genuinely requires it, and push it as far down the tree as possible.
+- Fetch data on the server. The client should not talk to the GitHub API directly if a server route can do it.
+- Use `next/image` for avatars (remote hosts must be allowlisted in `next.config.ts`).
+- Use `next/link` for navigation — never `window.location`.
+- URL is state: the search keyword and page belong in the query string, so results are shareable, refreshable, and backable.
+
+### Naming & layout
+```
+src/app/            routes, layouts, loading/error boundaries
+src/components/     reusable UI
+src/lib/            data fetching, GitHub client, pure helpers
+src/types/          shared type definitions
+src/**/*.test.tsx   tests, colocated next to what they test
+```
+- Components: `PascalCase.tsx`. Helpers and hooks: `camelCase.ts`. Route folders: lowercase.
+- One exported component per file. Co-locate a component's test beside it.
+
+### Error and edge handling (this is what "production" means here)
+Every data-driven view handles all of: **loading**, **empty results**, **network failure**, **GitHub rate limit (403/429)**, and **not found (404)**. Use App Router `loading.tsx` and `error.tsx` rather than hand-rolled flags where it fits.
+
+Never render a raw error object or stack trace to the user.
+
+## GitHub API rules
+
+- Search endpoint: `GET /search/repositories?q=…`. Detail: `GET /repos/{owner}/{repo}`.
+- **Rate limits are low and will be hit during review.** Unauthenticated search is ~10 requests/minute; core REST is 60/hour. Debounce input, avoid firing a request per keystroke, and surface a clear message when limited rather than an empty list.
+- An optional `GITHUB_TOKEN` raises the limits. If used, it is **server-side only** — never `NEXT_PUBLIC_`, never in a client component, never committed. Document it in `README.md` and `.env.example`.
+- Send `Accept: application/vnd.github+json`.
+- An empty or malformed `q` returns **422**, not an empty result set. Guard before calling.
+- Search caps out at 1000 results; `per_page` max is 100. Paginate deliberately.
+- **Known API quirk:** in the REST API, `watchers_count` is a duplicate of `stargazers_count`. The real watcher count is `subscribers_count`, which is only present on the detail endpoint. The brief asks for both stars *and* watchers — use `subscribers_count` for watchers and note the decision in the README.
+
+## Testing standards
+
+- Test behaviour a user can observe, not implementation details. Query by role and accessible name; avoid snapshot-only tests.
+- Mock the network at the boundary — never let tests hit the real GitHub API.
+- Every feature ships with tests for the happy path **and** at least one failure path (empty results or rate limit).
+- Tests live beside their subject as `*.test.ts(x)` under `src/`.
+
+## Git & commits
+
+- Small, atomic commits with an imperative subject describing the change.
+- Never commit secrets, `.env*` files, or `node_modules`.
+- The working tree must be green (`test`, `lint`, `typecheck`) before committing.
+- No GitHub remote is configured yet — this is intentional, local-only for now.
+
+## AI usage log (required)
 
 **Every time a process completes, append a record of how AI was used.**
 
@@ -38,10 +121,32 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - State honestly whether AI output was taken as-is or modified.
 
 > The assignment requires AI usage to be summarised in the README. `README.md` satisfies this by linking to the two files above.
->
-> Note: these AGENTS.md rules are in English for the agent's benefit. Submission-facing docs (`README.md`, `docs/AI-USAGE.ja.md`) stay in their intended language.
 
-## Agent Directives
-- Run `npm test`, `npm run lint`, and `npm run typecheck` after every significant change.
-- Design is not graded; prioritise usability and clarity over visual polish.
-- Before committing a process, update `docs/AI-USAGE.ja.md` **and** `docs/AI-USAGE.en.md`.
+## Agents used on this project
+
+This repo does **not** use the broader GSD / marketing / mobile agent suites available in the global config. Those are for other projects and add noise here. For this repo, the useful set is narrow:
+
+| Agent / skill | Use it for |
+| --- | --- |
+| `Explore` | Locating code across the repo before editing. Read-only. |
+| `Plan` | Designing an approach for a multi-file feature before writing it. |
+| `general-purpose` | Open-ended search or multi-step work that doesn't fit the two above. |
+| `test-driven-development` skill | Writing a feature — tests first. |
+| `systematic-debugging` skill | Any bug or unexpected test failure, before proposing a fix. |
+| `verification-before-completion` skill | Before claiming anything is done, fixed, or passing. |
+| `webapp-testing` skill | Driving the running app in a browser to verify real behaviour. |
+
+Rules for agent use here:
+- **Do not spawn agents for small, single-file edits.** The overhead exceeds the benefit.
+- Any agent that writes code inherits every rule in this file. Pass it this file's constraints explicitly.
+- A subagent's report is a claim, not a verified result. Re-run `npm test` / `npm run lint` / `npm run typecheck` yourself before trusting "done".
+- If an agent's output would violate an assignment constraint, discard it — the constraint wins.
+
+## Do not
+
+- Add the Pages Router, or downgrade Next.js below 16.
+- Implement the repository detail view as a modal.
+- Expose a GitHub token to the client, or commit one.
+- Weaken TypeScript strictness or disable lint rules to make an error go away.
+- Mark work complete without running the verification commands.
+- Skip the AI usage log for a process.

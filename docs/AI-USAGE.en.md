@@ -26,4 +26,29 @@ A per-process record of how AI was used on this project. The Japanese version is
 
 ---
 
+## Process 2: Project rules (`AGENTS.md`) and AI documentation workflow
+
+- **Date:** 2026-08-01
+- **Tool:** Claude Code (Claude Opus 5)
+- **Delegated to AI:**
+  - Wrote `AGENTS.md`, the repo's rules file, covering: assignment constraints, build/test commands, tech stack, coding standards (TypeScript, React/Next conventions, naming, file layout), required error and edge-case handling, GitHub API rules and rate limits, testing standards, git conventions, and an explicit "do not" list.
+  - Recorded the dependency decisions that are easy to lose — why `overrides` exist in `package.json`, and why npm overrides require a clean reinstall to take effect.
+  - Documented which agents this project uses, and which it deliberately does not (see below).
+  - Set up this two-file AI usage log and the rule that every process appends to both files before being committed.
+- **Human decisions:**
+  - Required that AI usage be documented **per process** rather than summarised once at the end, so the record reflects what actually happened at each step.
+  - Required a Japanese log for submission plus an English mirror.
+  - Chose to keep `AGENTS.md` in English — it is read by agents, not by reviewers, and English is faster and cheaper to process. Submission-facing docs stay in their intended language.
+- **Review:** Rules were checked against the assignment brief for contradictions. No application code was changed in this process.
+
+### Why `AGENTS.md` exists
+
+Claude Code loads `AGENTS.md` (via `CLAUDE.md`) automatically at the start of every session. Without it, each new session re-derives the project's conventions from scratch and drifts — most dangerously on the constraints that are invisible in the code, such as "the detail view must be a page, not a modal." Putting the rules in the repo makes them durable across sessions, and reviewable like any other file.
+
+### Why the agent roster is scoped
+
+The global Claude Code configuration exposes a large set of agents and skills built for other projects (planning suites, marketing, mobile). Most are irrelevant here and only add noise and cost. `AGENTS.md` therefore names the small set that is actually useful for this repo — exploration, planning, TDD, debugging, verification, and browser testing — and states that agents must inherit the project's constraints and that their reported results are re-verified locally rather than trusted.
+
+---
+
 <!-- Append the next process here -->
