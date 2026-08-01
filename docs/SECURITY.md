@@ -45,6 +45,19 @@ Rules, already recorded in `AGENTS.md` and enforced by construction:
 
 Detection, not just discipline: **gitleaks runs in CI** on full history, so a committed secret fails the build rather than sitting in the repo.
 
+### Keeping the real values out of AI tooling
+
+`.env.local` holds the only real secret this project can have, and no AI assistant working in this repository needs to read it — the code reads `process.env.GITHUB_TOKEN`, and whether that variable is set can be verified without seeing its value.
+
+[`.claude/settings.json`](../.claude/settings.json) enforces that rather than relying on good intent:
+
+- **Deny rules** block the file-read tool on `.env`, `.env.local`, `.env.*.local`, and the environment-specific variants. `.env.example` stays readable, since it is a committed template with no values.
+- **A pre-execution hook** blocks any shell command referencing those files, closing the obvious hole — a deny rule on reading does nothing about `cat .env`.
+
+Verified against both directions: `cat .env`, `head -5 .env`, `grep TOKEN .env.local`, and a Python one-liner opening `.env` are all blocked; `cat .env.example` and ordinary commands are unaffected.
+
+This is a guardrail, not a security boundary — a determined process could still obfuscate its way around a regex. It is committed to the repository so it applies to anyone working here, not just one machine.
+
 ## Response headers
 
 `next.config.ts` is currently empty, which means the app ships framework defaults and nothing more. For a production deployment the following belong there (Phase 4):

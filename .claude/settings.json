@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./.env.development)",
+      "Read(./.env.production)",
+      "Read(./.env.test)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | grep -qE '\\.env($|[^.a-zA-Z0-9])|\\.env\\.(local|development|production|test)' && { echo 'Blocked: this project forbids reading .env files. .env.example is the readable template.' >&2; exit 2; }; exit 0",
+            "statusMessage": "Checking for .env access"
+          }
+        ]
+      }
+    ]
+  }
+}
