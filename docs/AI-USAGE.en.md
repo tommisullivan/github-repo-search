@@ -11,6 +11,8 @@ A per-process record of how AI was used on this project. The Japanese version is
 - Record honestly whether AI output was accepted as-is or corrected.
 - Write the entry during the process, never retroactively in bulk.
 
+**When the "why" is not known, ask the developer — never invent one.** A plausible but fabricated reason is worse than none: it reads convincingly, a reviewer cannot falsify it, and it will not match what the developer says when asked in person. Every reason in this log is one the developer actually gave.
+
 An entry is finished only when a reviewer could answer "why did they build it this way?" from it alone.
 
 ---
@@ -73,6 +75,18 @@ The global Claude Code configuration exposes a large set of agents and skills bu
   - Chose coarse roadmap granularity and disabled per-phase research agents, since the domain is small and already well understood.
 - **Review:** `npm run lint`, `npm run typecheck`, `npm run test:coverage`, `npm run test:e2e`, and `npm run test:a11y` were each run locally and pass. `npm audit` reports zero vulnerabilities.
 - **Taken as-is vs modified:** The sub-agent's roadmap was accepted with one correction. It had marked the CI requirements simply "Complete"; since no GitHub remote exists yet, the workflow has never actually executed. The status was rewritten to state that the scripts pass locally but the workflow YAML is unverified until first push.
+
+### Why GSD as the planning framework
+
+The planning artifacts in `.planning/` were produced with GSD (Get Shit Done), a structured workflow framework. This was the developer's choice, for these reasons:
+
+- **It is the project management tool for this repo.** The project is local-only for now, so there is no Jira board behind it. GSD's `REQUIREMENTS.md`, `ROADMAP.md`, and `STATE.md` serve that role — requirements, phases, and current state tracked in version control alongside the code.
+- **It has a migration path to real PM tools.** GSD can be connected to Jira or Notion later, so a product manager writes tickets in the tool they already use and GSD converts each ticket into planned, executable work. Choosing it now does not mean rewriting the process when a team is involved.
+- **It is built for production systems, not prototypes.** Engineers at large companies use it precisely because it holds quality high through planning, execution, and verification rather than letting a model improvise.
+- **It has a strong code review capability**, which is used as a gate rather than trusting generated code by default.
+- **It does not make assumptions.** This is the deciding property. When something is uncertain, GSD checks by default instead of guessing and proceeding — the same discipline this log requires (see "When the 'why' is uncertain, ask" in `AGENTS.md`).
+
+In short: it works like a scrum team, with the ceremonies and quality gates a scrum team provides, but staffed by AI. For a task judged on production-mindedness, showing that the *process* was structured is part of the evidence, not overhead.
 
 ### Note on scope discipline
 

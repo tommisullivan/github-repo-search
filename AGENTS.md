@@ -145,13 +145,28 @@ Two files, **always updated together**:
 - **Taken as-is vs modified:** [honest account]
 ```
 
+### When the "why" is uncertain, ask
+
+**Never invent a rationale.** If you do not actually know why a choice was made — a tool, a library, a process, an architectural call — stop and ask the user before writing the entry.
+
+A fabricated-but-plausible reason is worse than no entry: it reads convincingly, it is unfalsifiable by the reviewer, and it will not match what the human says if they are asked about it in an interview. The log's value is that it is true.
+
+Ask when:
+- A decision predates you or was made in another session
+- The user chose a tool or approach without stating why
+- You can imagine two or more reasons and cannot tell which is real
+- You are about to write "presumably", "likely because", or "in order to" about someone else's decision
+
+Ask plainly — "why did you pick X over Y?" — and record the answer in the user's own terms.
+
 ### Before committing a process, check
 
-1. Could a reviewer answer "why did they build it this way?" from this entry alone?
-2. Is every rejected alternative recorded **with its reason**, not just the chosen path?
-3. Are the human's decisions distinguishable from the AI's?
-4. Does the review line name actual commands and outcomes?
-5. Do both language files say the same thing?
+1. Is every stated reason one the user actually gave, rather than one you inferred? If unsure — ask, don't guess.
+2. Could a reviewer answer "why did they build it this way?" from this entry alone?
+3. Is every rejected alternative recorded **with its reason**, not just the chosen path?
+4. Are the human's decisions distinguishable from the AI's?
+5. Does the review line name actual commands and outcomes?
+6. Do both language files say the same thing?
 
 If any answer is no, the entry is not finished.
 
