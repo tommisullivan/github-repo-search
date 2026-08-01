@@ -31,7 +31,7 @@ If a change would break any row above, stop and raise it rather than working aro
 ## Build & test
 
 ```bash
-nvm use            # Node 20.20.1 — the default Node 18 cannot run Next.js 16
+nvm use            # Node 24.18.1 — the machine default (18) is EOL and cannot run Next.js 16
 npm run dev        # dev server
 npm run build      # production build
 npm run lint       # ESLint
@@ -52,7 +52,7 @@ npm run test:a11y  # axe accessibility checks
 - Next.js 16.2.12 (App Router), React 19, TypeScript strict
 - Tailwind CSS v4
 - Vitest 4 + React Testing Library (jsdom)
-- Node 20.20.1 (`.nvmrc`)
+- Node 24.18.1 (`.nvmrc`), enforced by `engines` in `package.json`
 
 ### Dependency notes worth remembering
 

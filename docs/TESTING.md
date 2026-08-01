@@ -52,10 +52,10 @@ That registers `toBeInTheDocument`, `toHaveAccessibleName`, and friends on Vites
 ### Prerequisite: the right Node
 
 ```bash
-nvm use   # Node 20.20.1, from .nvmrc
+nvm use   # Node 24.18.1, from .nvmrc
 ```
 
-The machine default of Node 18 **cannot run Next.js 16**. Every command below assumes `nvm use` has been run in the shell first — an unexplained failure in the harness is usually this.
+The machine default of Node 18 is end-of-life and **cannot run Next.js 16**. Every command below assumes `nvm use` has been run in the shell first — an unexplained failure in the harness is usually this.
 
 ### Commands
 
@@ -259,7 +259,7 @@ Coverage is a floor for spotting untested branches, not a goal. 100% coverage of
 | `secrets` | gitleaks over full history (`fetch-depth: 0`) |
 | `codeql` | CodeQL SAST, `javascript-typescript`, `security-and-quality` query pack |
 
-Every job pins Node from `.nvmrc` via `node-version-file` and installs with `npm ci`, so CI and local runs use the same Node 20.20.1 and the same locked tree.
+Every job pins Node from `.nvmrc` via `node-version-file` and installs with `npm ci`, so CI and local runs use the same Node 24.18.1 and the same locked tree.
 
 In CI, Playwright behaves differently on purpose: `forbidOnly` rejects a stray `test.only`, failed tests retry once, traces are captured on first retry, and `reuseExistingServer` is disabled so every run builds and serves fresh.
 

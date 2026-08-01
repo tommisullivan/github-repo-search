@@ -14,7 +14,7 @@ A reviewer can search for a repository, open its detail page, and find the code 
 
 - ✓ Next.js 16.2.12 App Router scaffold, TypeScript strict, Tailwind v4 — Process 1
 - ✓ Vitest + React Testing Library harness, passing — Process 1
-- ✓ Node pinned to 20.20.1 via `.nvmrc` (Next 16 rejects Node 18) — Process 1
+- ✓ Node pinned via `.nvmrc`, now 24.18.1 with `engines: >=22` (Node 20 reached EOL April 2026) — Process 1, revised Process 5
 - ✓ Zero-vulnerability dependency tree via `overrides` — Process 1
 - ✓ Project rules and coding standards in `AGENTS.md` — Process 2
 - ✓ Bilingual per-process AI usage log — Process 2
@@ -50,7 +50,7 @@ A reviewer can search for a repository, open its detail page, and find the code 
 
 - **Tech stack**: Next.js v16+ with the App Router — mandated by the brief, non-negotiable.
 - **UX**: Repository detail must be a page with its own route, never a modal — explicit brief requirement.
-- **Tech stack**: Node 20.9+ required by Next 16; pinned to 20.20.1. The machine default is Node 18 and will fail.
+- **Tech stack**: Node 24.18.1, pinned in `.nvmrc` and enforced by `engines: >=22`. Next 16 needs `>=20.9`, but Node 20 and 18 are both end-of-life and receive no security updates.
 - **Quality**: Test code ships with features, not after — explicit brief requirement.
 - **Process**: Every completed process appends to both AI usage logs before commit.
 - **Security**: Any GitHub token is server-side only, never `NEXT_PUBLIC_`, never committed.

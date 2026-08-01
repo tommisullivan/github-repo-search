@@ -341,7 +341,7 @@ All **Built** — this is the current state of the repository.
 
 | Concern | Choice | Notes |
 |---|---|---|
-| Runtime | Node **20.20.1**, pinned in `.nvmrc` | Next 16 rejects Node 18, which is the machine default |
+| Runtime | Node **24.18.1**, pinned in `.nvmrc`, `engines` requires `>=22` | Next 16 needs `>=20.9`, but Node 20 reached end-of-life in April 2026. Node 24 is supported until April 2028 |
 | Framework | **Next.js 16.2.12**, App Router only | No `pages/` directory, ever |
 | UI | **React 19.2.4** | Server Components by default |
 | Language | **TypeScript** with `strict: true` | No `any`, no `@ts-ignore`, no non-null `!` to silence the compiler |
@@ -356,7 +356,7 @@ All **Built** — this is the current state of the repository.
 ## Local development
 
 ```bash
-nvm use          # Node 20.20.1 — the default Node 18 cannot run Next 16
+nvm use          # Node 24.18.1 — the machine default (18) is EOL and cannot run Next 16
 npm install
 npm run dev
 ```

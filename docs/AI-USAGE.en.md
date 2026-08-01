@@ -118,4 +118,29 @@ The brief is short, and the strongest temptation in a task like this is to add t
 
 ---
 
+## Process 5: Operations and security documentation, and the Node.js upgrade
+
+- **Date:** 2026-08-01
+- **Tool:** Claude Code (Claude Opus 5)
+- **Delegated to AI:**
+  - Audited the repository for what a production application needs but this one had not recorded, then wrote `docs/OPERATIONS.md` (observability, rate-limit monitoring, timeout and retry policy) and `docs/SECURITY.md` (threat model, token handling, response headers, privacy).
+  - Added ten requirements covering observability, security, localisation, and documentation, then propagated them through the roadmap phases and verified consistency automatically.
+  - Restructured CI so the application is built once and shared as an artifact, rather than three jobs each running an identical build.
+  - Upgraded the runtime from Node 20.20.1 to 24.18.1 and added an `engines` constraint.
+- **Why this approach:**
+  - Observability was entirely absent, which mattered more than it first appeared: this app's dominant failure mode is GitHub rate-limit exhaustion rather than a code fault, and every response already carries the remaining quota in a header. Logging it makes degradation visible before failure instead of only at the moment of failure.
+  - Resilience had a concrete hole — a bare `fetch()` has no timeout and would hold a render open indefinitely if the upstream stalled. The accompanying rule, never to retry a rate-limited request, is recorded explicitly because the instinct runs the other way: retrying spends the quota that is already gone.
+  - Node 20 reached end of life in April 2026 and no longer receives security updates. A project presented as production-minded cannot pin an unsupported runtime, and the fact is visible in a single file. Node 24 is supported until 2028.
+  - Observability tooling was constrained to free and self-hostable options, with structured stdout logging as the default, so that the application still runs with no services at all. Anything requiring a collector or container is opt-in and never a prerequisite.
+- **Human decisions:**
+  - Required that all tooling be free and able to run locally, which ruled out hosted error-tracking and monitoring services.
+  - Chose Japanese for the interface with English code, comments and commits — a decision that had never been recorded and would have blocked the first interface work.
+  - Requested the build-sharing change in CI after it was raised as wasteful rather than incorrect.
+  - Authorised the Node upgrade.
+- **Review:** All seven gates were re-run under the new runtime after a clean reinstall — lint, typecheck, coverage, build, dependency audit, end-to-end, and accessibility all pass. The CI workflow was parsed programmatically to confirm exactly one build remains and no job depends on a job that does not exist. Both the continuous-integration and local paths of the test configuration were exercised separately, because a change that made the pipeline faster could easily have broken every developer's local run.
+  Requirement coverage was verified by set comparison across three separate views — the requirements traceability table, each phase's requirement list, and the roadmap coverage table — rather than by counting: 44 of 44, consistent everywhere.
+- **Taken as-is vs modified:** The pre-upgrade review produced findings that were acted on rather than filed. Beyond the runtime, it found stale figures left behind by an earlier edit, a documentation claim that no longer matched reality, and missing package metadata. One consequence of the upgrade is worth recording for later: the newer package manager now blocks dependency install scripts by default. Nothing in this project broke, but that is worth watching the first time the pipeline runs on a different operating system.
+
+---
+
 <!-- Append the next process here -->

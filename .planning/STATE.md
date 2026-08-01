@@ -58,7 +58,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Node 20.20.1 is required (`nvm use`). The machine default is Node 18 and Next 16 will refuse to run.
+- Node 24.18.1 is required (`nvm use`). The machine default is Node 18, which is end-of-life and cannot run Next 16.
 - GitHub unauthenticated search is ~10 req/min. Manual verification will hit the limit; use a server-side token locally or mock.
 - No GitHub remote is configured — local-only by user instruction. CI requirements (Phase 0) are defined in-repo but cannot run until a remote exists.
 - Next's fetch cache means a cache hit performs no network call, so rate-limit headers read from a cached response are likely stale rather than current. Confirm the actual behaviour during Phase 1 before treating any logged value as live headroom.
@@ -76,7 +76,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-08-01
-Stopped at: ROADMAP.md and STATE.md written; REQUIREMENTS.md traceability confirmed at 34/34
+Stopped at: Node upgraded to 24.18.1; traceability confirmed at 44/44 across REQUIREMENTS.md and both ROADMAP.md views
 Resume file: None
 
 Next: `/gsd:plan-phase 1`

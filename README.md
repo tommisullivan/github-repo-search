@@ -31,7 +31,7 @@ A GitHub repository search app built for an engineering selection task. Users en
 | UI | React 19, Tailwind CSS v4 |
 | Language | TypeScript (strict) |
 | Tests | Vitest + React Testing Library (jsdom) |
-| Runtime | Node 20.20.1 (`.nvmrc`) |
+| Runtime | Node 24.18.1 (`.nvmrc`) |
 
 ## Getting Started
 
@@ -97,7 +97,7 @@ AI usage is logged per process, in both languages:
 
 **Rule:** every completed process appends an entry to *both* files before it is committed — process number, date, tool, what AI did, what the human decided, and how it was reviewed.
 
-So far: Process 1 (spec comprehension + base scaffold) and Process 2 (project rules + AI documentation workflow) are done. Architecture has deliberately not been designed yet.
+So far: Process 1 (spec comprehension + base scaffold), Process 2 (project rules + AI documentation workflow), Process 3 (architecture, planning and CI), Process 4 (architecture diagrams, boundary design, testing strategy), and Process 5 (operations, security, and the Node upgrade). Feature implementation has not started.
 
 Project conventions and constraints live in [`AGENTS.md`](./AGENTS.md), which AI coding tools load automatically at the start of every session.
 

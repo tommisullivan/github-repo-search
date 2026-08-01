@@ -2,6 +2,10 @@
   "name": "github-repo-search",
   "version": "0.1.0",
   "private": true,
+  "description": "Search GitHub repositories by keyword and view repository details on a dedicated page.",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
