@@ -64,10 +64,17 @@ vitest.config.mts   Test runner config
 vitest.setup.ts     jest-dom matchers + auto cleanup
 ```
 
-## AI Usage
+## AI Usage / AI 利用について
 
-This scaffold was generated with Claude Code (Claude Opus): it read the assignment brief, ran `create-next-app`, and wired up the Vitest + React Testing Library harness. Keep this section current as the app is built out — record which parts were AI-assisted and how the output was reviewed.
+AI usage is logged per process, in both languages:
+
+- [`docs/AI-USAGE.ja.md`](./docs/AI-USAGE.ja.md) — 日本語
+- [`docs/AI-USAGE.en.md`](./docs/AI-USAGE.en.md) — English
+
+**Rule:** every completed process appends an entry to *both* files before it is committed — process number, date, tool, what AI did, what the human decided, and how it was reviewed.
+
+So far: Process 1 (spec comprehension + base scaffold) is done. Architecture has deliberately not been designed yet.
 
 ## Notes
 
-- `npm audit` reports 3 high-severity advisories in `postcss` and `sharp`, both transitive dependencies of `next@16.2.12`. There is no non-breaking fix; `npm audit fix --force` would downgrade Next.js to v9, which violates the assignment. Left as-is intentionally.
+- `next@16.2.12` is the latest stable release. Its pinned `postcss@8.4.31` and `sharp@0.34.5` carry known advisories, which upstream fixes in unreleased 16.3 previews by bumping those pins. The same bump is applied here via `overrides` in `package.json` — `npm audit` reports 0 vulnerabilities, and typecheck, lint, tests, and build all pass.
