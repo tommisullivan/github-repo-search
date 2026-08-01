@@ -85,12 +85,36 @@ The planning artifacts in `.planning/` were produced with GSD (Get Shit Done), a
 - **It is built for production systems, not prototypes.** Engineers at large companies use it precisely because it holds quality high through planning, execution, and verification rather than letting a model improvise.
 - **It has a strong code review capability**, which is used as a gate rather than trusting generated code by default.
 - **It does not make assumptions.** This is the deciding property. When something is uncertain, GSD checks by default instead of guessing and proceeding — the same discipline this log requires (see "When the 'why' is uncertain, ask" in `AGENTS.md`).
+- **It validates its own output automatically.** Validation is a built-in stage, not something remembered by hand: plans are checked against the phase goal before execution, completed work is verified against the requirements it claimed to satisfy, requirement-to-phase coverage is proven rather than assumed, and generated documentation is fact-checked against the actual codebase. Generated output is treated as a claim to verify, never as a finished result.
 
 In short: it works like a scrum team, with the ceremonies and quality gates a scrum team provides, but staffed by AI. For a task judged on production-mindedness, showing that the *process* was structured is part of the evidence, not overhead.
 
 ### Note on scope discipline
 
 The brief is short, and the strongest temptation in a task like this is to add things that look impressive — a database, authentication, a caching service. Each was considered and rejected explicitly, with the reasoning written down in `docs/ARCHITECTURE.md` and `.planning/PROJECT.md`. Unnecessary infrastructure is not neutral in a code review; it invites the question "why is this here?", and the honest answer would have been "it isn't needed."
+
+---
+
+## Process 4: Architecture documentation, boundary design, and testing strategy
+
+- **Date:** 2026-08-01
+- **Tool:** Claude Code (Claude Opus 5), running GSD's documentation workflow with two documentation sub-agents in parallel
+- **Delegated to AI:**
+  - First, tightened this log's own standard: "why" became a required field, and a rule was added that when a rationale is not actually known it must be asked for, never invented.
+  - Rewrote `docs/ARCHITECTURE.md` with five diagrams — system shape, a structural view down to named functions, an API boundary diagram, and two request sequences covering the success and failure branches.
+  - Added an API boundary section defining what each unit owns, may depend on, and must not touch, with the rules framed as code-review rejection criteria.
+  - Created `docs/TESTING.md` — the three test layers and their explicit non-responsibilities, the mocking boundary, the five failure modes every feature must cover, the accessibility setup, and the CI gate.
+  - Tagged every module in the architecture doc as Built or Planned with its delivery phase.
+- **Why this approach:**
+  - The app is read-only — no create, update, or delete anywhere, because GitHub owns the data. Its production burden is therefore CI and testing, not application complexity. The architecture document's job is to make the boundaries legible and prove the seams are clean, not to describe intricate logic that does not exist.
+  - The GitHub-facing code is split into a Search unit and a Repository unit over a shared, stateless HTTP and error core. The value is that each unit is independently replaceable and neither can reach into the other, so a change to one endpoint cannot ripple through the app. Written as explicit rules because a boundary nobody can check is not a boundary.
+  - Documenting the target design while the code is still a scaffold risks implying more exists than does. Marking every part Built or Planned was chosen over both alternatives — describing only the scaffold would have discarded the design reasoning, and describing the target with no markers would have overstated progress.
+- **Human decisions:**
+  - Rejected generating the full nine-document set. Against a scaffold, most would have been hollow; architecture and testing were the two that carry real information.
+  - Required that the boundaries be shown as clean separations without ever labelling them a candidate for splitting into services. The structural property is what matters; speculating about future deployment topology would have been noise.
+  - Chose to mark build status explicitly rather than let the document imply completeness.
+- **Review:** `npm run lint`, `npm run typecheck`, `npm run test:coverage`, and `npm audit` all pass. The CI job names in the document were checked line by line against `.github/workflows/ci.yml` — all six match. Every Mermaid diagram was parsed with mermaid 11, the version GitHub renders with: 5 of 5 valid.
+- **Taken as-is vs modified:** Neither sub-agent's output was taken on trust, and checking them was worthwhile three times over. Both claimed their diagrams were valid; the first verification run failed three of five, which traced to a fault in the verification setup rather than the diagrams — re-run correctly, all five passed. The previous version of the architecture document had described a CI job named `security` that does not exist in the workflow; that was corrected to the six real jobs. Most usefully, the testing sub-agent found a genuine defect in `vitest.config.mts`: the coverage configuration collected `*.spec` files as tests while failing to exclude them from the measured source, so such a file would have counted as fully covered code and silently inflated the coverage figure. Fixed, along with three places where `AGENTS.md` and `README.md` had drifted from the scripts and directories that actually exist.
 
 ---
 
