@@ -18,6 +18,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    # Gated on quality: if lint, types, or unit tests fail there is no point building,
+    # and no point running browser tests against the result. The pipeline stops here.
+    needs: quality
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -42,9 +46,11 @@ jobs:
           retention-days: 1
           include-hidden-files: true
 
+  # Fastest, cheapest checks run first and gate everything downstream.
   quality:
     name: Lint, typecheck, test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +74,7 @@ jobs:
     name: End-to-end (mocked GitHub API)
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -106,6 +113,7 @@ jobs:
     name: Accessibility (axe)
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -130,9 +138,12 @@ jobs:
         env:
           PLAYWRIGHT_PREBUILT: "1"
 
+  # Security checks are independent of the build chain — they inspect source and
+  # dependencies, so they still run (and can still block) if the build fails.
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -150,6 +161,7 @@ jobs:
   secrets:
     name: Secret scanning
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -163,6 +175,7 @@ jobs:
   codeql:
     name: CodeQL (SAST)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       security-events: write
@@ -183,6 +196,7 @@ jobs:
   gate:
     name: CI Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: always()
     needs: [build, quality, e2e, a11y, audit, secrets, codeql]
     steps:

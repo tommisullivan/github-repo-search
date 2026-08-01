@@ -267,22 +267,34 @@ Every job pins Node from `.nvmrc` via `node-version-file` and installs with `npm
 
 In CI, Playwright behaves differently on purpose: `forbidOnly` rejects a stray `test.only`, failed tests retry once, traces are captured on first retry, and `reuseExistingServer` is disabled so every run serves fresh.
 
-### Blocking merges
+### Execution order and fail-fast
 
-A workflow cannot block a pull request on its own — that requires branch protection, which is a repository setting rather than a file. The `gate` job exists to make that setting a one-liner: mark **only `CI Gate`** as required, and it fails unless every other job succeeded. Adding, renaming, or removing a job then never requires touching repository settings, which matters because a required check that no longer exists blocks every PR indefinitely.
+Jobs are staged so a failure stops the work behind it rather than burning runner minutes on a build nobody will merge:
 
-Once a remote exists:
-
-```bash
-gh api -X PUT repos/:owner/:repo/branches/main/protection \
-  -f 'required_status_checks[strict]=true' \
-  -f 'required_status_checks[contexts][]=CI Gate' \
-  -f 'enforce_admins=true' \
-  -f 'required_pull_request_reviews[required_approving_review_count]=0' \
-  -F 'restrictions=null'
+```
+quality ──▶ build ──▶ e2e
+                  └─▶ a11y
+audit ─┐
+secrets ┼─ (independent, run in parallel)
+codeql ─┘
+                          all ──▶ CI Gate
 ```
 
-`strict` requires the branch to be up to date with its base before merging. Anything other than success — failure, cancellation, or a skipped job — blocks.
+If `quality` fails, `build`, `e2e`, and `a11y` never start — they are reported as skipped, and skipped is not success, so the gate blocks. The security jobs deliberately stay off that chain: they inspect source and dependencies rather than build output, so a leaked secret is still caught on a branch that does not compile.
+
+Every job carries a `timeout-minutes`. GitHub's default is six hours, which means a hung process quietly consumes an entire budget instead of failing.
+
+### Blocking merges
+
+A workflow cannot block a pull request on its own — that requires branch protection, which is a repository setting rather than a file, and therefore cannot be committed. [`.github/setup-branch-protection.sh`](../.github/setup-branch-protection.sh) applies it in one command once a remote exists:
+
+```bash
+.github/setup-branch-protection.sh main
+```
+
+It marks **only `CI Gate`** as required. That job aggregates every other job, so jobs can be added, renamed, or removed without touching repository settings — whereas a required check that no longer reports blocks every PR indefinitely, with no failure to click into.
+
+It also sets: `strict` (branch must be up to date with its base), `enforce_admins` (a rule you can bypass is not a rule), linear history, no force pushes, no branch deletion, and resolved review conversations.
 
 **Honest caveat:** this workflow has **never executed**. No GitHub remote is configured for this repository yet — that is deliberate and recorded in [`AGENTS.md`](../AGENTS.md) and Phase 0 of the roadmap. Every script the workflow invokes (`lint`, `typecheck`, `test:coverage`, `test:e2e`, `test:a11y`, `audit`, `build`) has been run locally and passes. The jobs are *defined and locally verified*, not *observed green in CI*. The first push will confirm them.
 
