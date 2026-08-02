@@ -140,6 +140,23 @@ UI 文言はすべて日本語、コード・コメント・コミットはす�
 - **CodeRabbit などの AI コードレビューとの連携。** PR に AI レビューアを接続すると、その指摘を人間だけでなくエージェントも読めるようになります。指摘を読む → 修正を適用する → 再度検証する、というループを自動化すれば、機械的な指摘は人間のレビュー前に片付きます。
 - **境界は変えません。** 自動化するのは修正の*提案*までです。本リポジトリの「**エージェントは決してマージしない**」という規則は変わりません。CI が緑であることは必要条件であって十分条件ではなく、その変更が正しい判断だったかを言えるのは人間だけです。
 
+### 本番環境で AI エージェントをどう使うか（本課題の範囲外）
+
+本課題は単一のアプリケーションですが、同じ考え方は実務にも延長できます。要点は「一体の万能エージェント」ではなく、**役割ごとに分けた小さなエージェントを、それぞれ責務と権限を限定して置く**ことです。責務が狭いほど、出力が正しいかを人間が判断しやすくなります。
+
+- **可観測性エージェント。** アラートやエラー率の異常を検知した時点で、Jira チケットを自動起票する。単に「500 が増えた」と書くのではなく、発生時刻・影響範囲・関連するデプロイやリリースを添える。**コードベースへの読み取り権限を与えられる場合は、原因と思われる箇所（ファイル・関数・直近の該当コミット）までチケットに書ける**ため、担当者は調査の起点をゼロから探さずに済みます。さらに踏み込めば修正 PR の下書きまで作れますが、そこまで許すかは会社の方針次第です。
+- **トリアージ／オンコール支援。** 受け取ったアラートを重大度で分類し、既知の障害や過去のインシデントと突き合わせ、重複を束ねる。深夜に人間が最初に読むべき 1 件を選ぶ作業は、機械のほうが安定します。
+- **依存関係の更新エージェント。** Dependabot が上げた PR に対し、破壊的変更の追従修正を当て、テストを走らせ、何が変わったかを PR に書く。放置されがちで、しかし放置すると危険な領域です。
+- **リリースノート／変更履歴。** マージ済み PR から利用者向けの記述を生成する。事実はすべて履歴の中にあり、書き写す作業だけが残っています。
+- **ドキュメントの乖離検出。** コードと README・仕様書がずれた箇所を指摘する。本リポジトリでも「Phase 3 で解決済みなのに『Phase 3 の課題だから未対応』と書かれたままのコメント」が実際に発生しました（`ResultList.tsx` のアバターの件）。
+
+**前提となる条件のほうが、エージェントの種類より重要です。**
+
+- **権限は最小限に、明示的に。** エージェントにコードベースを読ませるか否かは技術的な判断ではなく、機密情報と知的財産の判断です。「会社によりけり」という但し書きは、実装の詳細ではなく前提条件そのものです。
+- **提案までは自動、適用は人間。** 本番に触れる経路ほど、この線引きを緩めない。本リポジトリの「エージェントは決してマージしない」と同じ理由です。
+- **エージェントにも監査証跡を。** どのエージェントが、いつ、何を根拠にそう判断したかが残らなければ、レビューできません。本リポジトリの AI 利用ログと同じ発想です。
+- **ノイズは無価値より悪い。** 精度の低いチケットを大量に起票するエージェントは、人間の注意を消費するぶん、置かないほうがましです。導入初期は「起票せず提案だけ」から始め、精度を測ってから権限を広げるのが安全です。
+
 ## 補足
 
 - `next@16.2.12` が固定する `postcss@8.4.31` と `sharp@0.34.5` には既知のアドバイザリがあります。上流の未リリース 16.3 プレビューと同じ修正を `package.json` の `overrides` で適用しており、`npm audit` は脆弱性 0 件です。
@@ -283,6 +300,23 @@ None of the following is built in this project. It is recorded as intent, not as
 - **Connecting to Jira, Notion or a similar project-management tool.** A phase in `.planning/` and a ticket are close to the same granularity. Creating a ticket when a phase is opened, updating its status when the PR merges, and attaching the matching AI-usage entry would make the audit trail followable from outside the repository. Today a human reconciles the two by eye.
 - **Connecting an AI code reviewer such as CodeRabbit to the PR.** With one attached, its findings become readable by an agent as well as a human — enabling a loop of read the finding, apply the fix, re-verify, so that mechanical comments are resolved before a human review begins.
 - **The boundary does not move.** Automation would extend only as far as *proposing* fixes. This repository's rule that **an agent never merges** stands. Green CI is necessary, not sufficient: only a human can say the change was the right call.
+
+### Using AI agents in a production environment (outside the scope of this assignment)
+
+This assignment is a single application, but the same thinking extends to real operations. The useful shape is not one all-purpose agent; it is **several small agents, each with a narrow role and explicitly limited permissions**. The narrower the responsibility, the easier it is for a human to judge whether the output is right.
+
+- **An observability agent.** When it detects an alert or an anomalous error rate, it opens a Jira ticket automatically — not just "500s are up", but with the time, the blast radius, and the deploy or release that correlates. **Where it is allowed read access to the codebase, it can name the likely location in the ticket** — file, function, the recent commit that touched it — so whoever picks it up does not start the investigation from nothing. Further still, it can draft a fix PR; how far that is permitted is a company decision.
+- **Triage / on-call support.** Classify incoming alerts by severity, match them against known issues and past incidents, and collapse duplicates. Choosing the one page a human should read first at 3am is work a machine does more consistently than a tired person.
+- **A dependency-upgrade agent.** Take the PR Dependabot raised, apply the follow-up changes a breaking release requires, run the tests, and write up what changed. It is work that gets deferred and is dangerous to defer.
+- **Release notes and changelogs.** Generate the user-facing description from merged PRs. Every fact is already in the history; only the transcription is left.
+- **Documentation-drift detection.** Flag where code and the README or specs have diverged. This repository produced a real instance: a comment saying a thing was "deliberately not here because that is Phase 3's concern" survived Phase 3 shipping (the avatars in `ResultList.tsx`).
+
+**The preconditions matter more than the list of agents.**
+
+- **Least privilege, stated explicitly.** Whether an agent may read the codebase is not a technical decision — it is a confidentiality and IP decision. "It depends on the company" is not an implementation detail; it is the precondition.
+- **Automate up to the proposal; a human applies it.** The closer a path gets to production, the less this line should move. Same reasoning as this repository's never-merge rule.
+- **Agents need an audit trail too.** If there is no record of which agent concluded what, when, and on what evidence, there is nothing to review. Same idea as the AI usage log here.
+- **Noise is worse than nothing.** An agent that files many low-precision tickets is worse than no agent, because it spends human attention. The safe rollout is to start in propose-only mode, measure precision, and widen permissions afterwards.
 
 ## Notes
 
