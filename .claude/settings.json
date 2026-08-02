@@ -7,7 +7,9 @@
       "Read(./.env.*.local)",
       "Read(./.env.development)",
       "Read(./.env.production)",
-      "Read(./.env.test)"
+      "Read(./.env.test)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr merge *)"
     ]
   },
   "hooks": {
