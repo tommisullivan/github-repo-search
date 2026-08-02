@@ -15,11 +15,11 @@
 
 ### Search
 
-- [ ] **SRCH-01**: User can enter a keyword and see matching repositories
-- [ ] **SRCH-02**: Each result shows repository name, owner, primary language, and star count
-- [ ] **SRCH-03**: The keyword and page live in the URL query string, so results are shareable and the back button works
-- [ ] **SRCH-04**: User can page through results (GitHub caps at 1000 results)
-- [ ] **SRCH-05**: Input does not fire one request per keystroke
+- [x] **SRCH-01**: User can enter a keyword and see matching repositories
+- [x] **SRCH-02**: Each result shows repository name, owner, primary language, and star count
+- [x] **SRCH-03**: The keyword and page live in the URL query string, so results are shareable and the back button works
+- [x] **SRCH-04**: User can page through results (GitHub caps at 1000 results)
+- [x] **SRCH-05**: Input does not fire one request per keystroke
 
 ### Detail
 
@@ -31,10 +31,10 @@
 
 ### UX & Resilience
 
-- [ ] **UX-01**: Loading state while search and detail data resolve
-- [ ] **UX-02**: Empty-result state that tells the user what to do next
-- [ ] **UX-03**: Network and API failures render a usable error state — never a raw error or stack trace
-- [ ] **UX-04**: Rate limiting (403/429) is identified specifically, not shown as "no results"
+- [x] **UX-01**: Loading state while search and detail data resolve
+- [x] **UX-02**: Empty-result state that tells the user what to do next
+- [x] **UX-03**: Network and API failures render a usable error state — never a raw error or stack trace
+- [x] **UX-04**: Rate limiting (403/429) is identified specifically, not shown as "no results"
 - [x] **UX-05**: Unknown owner/repo renders a not-found page
 - [ ] **UX-06**: Keyboard operable with labelled controls and correct heading structure
 - [ ] **UX-07**: Layout works on mobile and desktop widths
@@ -53,7 +53,7 @@
 
 ### Localisation
 
-- [ ] **I18N-01**: All user-facing strings are Japanese, including `aria-label` values; all code, comments, and commits are English
+- [x] **I18N-01**: All user-facing strings are Japanese, including `aria-label` values; all code, comments, and commits are English
 
 ### Testing
 
@@ -124,7 +124,7 @@ Deferred. Tracked but not in the current roadmap.
 | OBS-02 | Phase 1 | Complete |
 | OBS-03 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
-| I18N-01 | Phase 2 | Pending |
+| I18N-01 | Phase 2 | Complete |
 | SEC-02 | Phase 3 | Complete |
 | SEC-01 | Phase 4 | Pending |
 | API-01 | Phase 1 | Complete |
@@ -133,15 +133,15 @@ Deferred. Tracked but not in the current roadmap.
 | API-04 | Phase 1 | Complete |
 | API-05 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Complete |
-| SRCH-01 | Phase 2 | Pending |
-| SRCH-02 | Phase 2 | Pending |
-| SRCH-03 | Phase 2 | Pending |
-| SRCH-04 | Phase 2 | Pending |
-| SRCH-05 | Phase 2 | Pending |
-| UX-01 | Phase 2 | Pending |
-| UX-02 | Phase 2 | Pending |
-| UX-03 | Phase 2 | Pending |
-| UX-04 | Phase 2 | Pending |
+| SRCH-01 | Phase 2 | Complete |
+| SRCH-02 | Phase 2 | Complete |
+| SRCH-03 | Phase 2 | Complete |
+| SRCH-04 | Phase 2 | Complete |
+| SRCH-05 | Phase 2 | Complete |
+| UX-01 | Phase 2 | Complete |
+| UX-02 | Phase 2 | Complete |
+| UX-03 | Phase 2 | Complete |
+| UX-04 | Phase 2 | Complete |
 | DTL-01 | Phase 3 | Complete |
 | DTL-02 | Phase 3 | Complete |
 | DTL-03 | Phase 3 | Complete |

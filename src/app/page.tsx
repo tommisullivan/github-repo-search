@@ -1,65 +1,146 @@
-import Image from "next/image";
+/**
+ * Search route — `/`.
+ *
+ * Server Component. Reads `searchParams.q` and `searchParams.page`, calls
+ * `searchRepositories()` on the server, and renders one of five states —
+ * happy, empty, rate-limited, invalid-query (two distinguishable causes), or a
+ * throw that reaches `app/error.tsx`. Never `try`/`catch` around the client
+ * call — a thrown `GitHubRequestError` must propagate to the boundary
+ * (D-07 in phase context; D-03 in Phase 1).
+ *
+ * In Next 16 the App Router passes `searchParams` as a Promise — this is a
+ * breaking change from earlier versions. See
+ * `node_modules/next/dist/docs/…` if the type ever drifts.
+ */
 
-export default function Home() {
+import {
+  searchRepositories,
+  SEARCH_MAX_RESULTS,
+  SEARCH_PER_PAGE,
+} from "@/lib/github/search";
+import { EmptyState } from "@/components/EmptyState";
+import { InvalidQueryNotice } from "@/components/InvalidQueryNotice";
+import { Pagination } from "@/components/Pagination";
+import { RateLimitPanel } from "@/components/RateLimitPanel";
+import { ResultList } from "@/components/ResultList";
+import { SearchInput } from "@/components/SearchInput";
+
+/**
+ * Derived from the exported client constants — never written as `50` literally.
+ * Changing `SEARCH_PER_PAGE` in the client moves this bound with it, so a
+ * change cannot silently open the ceiling (STATE.md carried this from
+ * Phase 1's plan 01-04).
+ */
+const SEARCH_MAX_PAGE = Math.floor(SEARCH_MAX_RESULTS / SEARCH_PER_PAGE);
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+type SearchPageProps = {
+  searchParams: Promise<SearchParams>;
+};
+
+function readParam(value: string | string[] | undefined): string {
+  if (value === undefined) return "";
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
+
+function parsePage(raw: string): number {
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
+}
+
+export default async function Home({ searchParams }: SearchPageProps) {
+  const params = await searchParams;
+  const q = readParam(params.q);
+  const page = parsePage(readParam(params.page));
+
+  const trimmedQ = q.trim();
+  const isBlankQuery = trimmedQ === "";
+  const isOutOfRangePage = !isBlankQuery && page > SEARCH_MAX_PAGE;
+
+  // Resolve the content region on the server, so the rendered tree is fully
+  // synchronous JSX. Deliberately NO try/catch around searchRepositories —
+  // a thrown GitHubRequestError from the client (transport fault, timeout,
+  // 5xx) must reach app/error.tsx unchanged (D-07 / D-03).
+  const content = isBlankQuery ? (
+    <InvalidQueryNotice reason="blank" />
+  ) : isOutOfRangePage ? (
+    <InvalidQueryNotice reason="out-of-range" />
+  ) : (
+    await renderSearchResults(trimmedQ, page)
+  );
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <main className="mx-auto max-w-3xl w-full flex flex-col gap-4 p-6">
+      <h1 className="text-2xl font-semibold">GitHubリポジトリ検索</h1>
+
+      <label className="flex flex-col gap-2">
+        <span className="text-sm">キーワード</span>
+        <SearchInput initialQuery={q} />
+      </label>
+
+      {content}
+    </main>
+  );
+}
+
+async function renderSearchResults(q: string, page: number) {
+  const result = await searchRepositories(q, page);
+
+  if (!result.ok) {
+    switch (result.error.code) {
+      case "RATE_LIMIT":
+        // Sample the clock once per server request, at the boundary. The
+        // panel itself must stay pure (react-hooks/purity) — see the
+        // rationale on RateLimitPanel's `now` prop.
+        return (
+          <RateLimitPanel
+            resetAt={result.error.resetAt}
+            now={Math.floor(Date.now() / 1000)}
+          />
+        );
+      case "INVALID_QUERY":
+        // The page's guards catch blank and out-of-range before we reach
+        // here, so this branch is defensive against a future client-side
+        // return we cannot predict. Blank copy is the honest fallback.
+        return <InvalidQueryNotice reason="blank" />;
+      case "NOT_FOUND":
+        // searchRepositories never returns NOT_FOUND, but the exhaustive
+        // switch protects against a future addition to the type.
+        return <InvalidQueryNotice reason="blank" />;
+      default: {
+        // Exhaustiveness check — compiles only if every code is handled.
+        const _exhaustive: never = result.error;
+        return _exhaustive;
+      }
+    }
+  }
+
+  const {
+    items,
+    totalCount,
+    page: currentPage,
+    hasNextPage,
+  } = result.data;
+
+  if (items.length === 0) {
+    return <EmptyState />;
+  }
+
+  const start = (currentPage - 1) * SEARCH_PER_PAGE + 1;
+  const end = start + items.length - 1;
+  const currentSearchUrl = `/?q=${encodeURIComponent(q)}&page=${currentPage}`;
+
+  // Pagination lives only in the happy branch — a user on the empty,
+  // rate-limited, or invalid-query state has no page-2 to visit, so a
+  // disabled control there would be visual noise (SRCH-04).
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="px-6 text-sm text-zinc-600 dark:text-zinc-400">
+        全 {totalCount.toLocaleString("ja-JP")} 件中 {start}〜{end} 件
+      </p>
+      <ResultList items={items} currentSearchUrl={currentSearchUrl} />
+      <Pagination q={q} page={currentPage} hasNextPage={hasNextPage} />
     </div>
   );
 }

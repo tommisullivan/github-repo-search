@@ -28,7 +28,7 @@
 import { notFound } from "next/navigation";
 
 import { RepoDetail } from "@/components/RepoDetail";
-import { RateLimitPanel } from "@/components/RateLimitPanel";
+import { RepoRateLimitPanel } from "@/components/RepoRateLimitPanel";
 import { resolveBackTarget } from "@/lib/backTarget";
 import { getRepository } from "@/lib/github/repo";
 import type { GitHubFailure } from "@/lib/github/errors";
@@ -63,7 +63,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
 
   switch (failure.code) {
     case "RATE_LIMIT":
-      return <RateLimitPanel resetAt={failure.resetAt} />;
+      return <RepoRateLimitPanel resetAt={failure.resetAt} />;
     case "NOT_FOUND":
       // notFound() throws internally so the framework can render not-found.tsx.
       // Its signature is `() => never`, so no `break` is needed and the

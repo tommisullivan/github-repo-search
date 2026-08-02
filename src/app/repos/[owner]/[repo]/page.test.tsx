@@ -183,7 +183,7 @@ describe("<RepoPage> — failure routing (UX-05, D3-04..D3-07)", () => {
     expect(notFound).toHaveBeenCalledTimes(1);
   });
 
-  it("renders RateLimitPanel with the reset time when the client returns RATE_LIMIT", async () => {
+  it("renders RepoRateLimitPanel with the reset time when the client returns RATE_LIMIT", async () => {
     vi.mocked(getRepository).mockResolvedValue({
       ok: false,
       error: { code: "RATE_LIMIT", resetAt: 1_988_000_000 },

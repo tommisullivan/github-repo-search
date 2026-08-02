@@ -1,66 +1,53 @@
 /**
- * `<RateLimitPanel>` — the rate-limit state renderer.
+ * Dedicated panel for the `RATE_LIMIT` failure.
  *
- * This exists as a component the *page* renders because Phase 1's client
- * returns `RATE_LIMIT` as a `Result` failure rather than throwing (D-01 /
- * D-05a, see `src/lib/github/errors.ts` header). In production, Next
- * sanitises server errors before the client error boundary receives them, so
- * per-state UI inside `error.tsx` would work in development and silently
- * degrade to one generic message once deployed — the exact bug class Phase 1
- * designed the hybrid model to avoid.
+ * Server Component. Never rendered as "no results" — the two states use
+ * different components, different ARIA roles, and different copy. This is
+ * UX-04's mitigation at the render layer.
  *
- * Every string is Japanese; the time is formatted in Asia/Tokyo because the
- * reviewers are Japanese engineers and the app has no server-side signal that
- * would justify anything else. "20:14 UTC" is not actionable in Tokyo.
- *
- * A missing `GITHUB_TOKEN` raises the limit (Phase 1 D-15), but D-16 keeps
- * that notice server-side only — the copy here does not say "set a token",
- * because a user cannot act on that. It explains what happened and when to
- * retry, and that is the whole job.
+ * The message tells the user *when* to retry (D-11, D-23), computed from
+ * `resetAt` — the Unix-seconds timestamp GitHub returned on the 403/429.
  */
 
-import Link from "next/link";
-
-/** Instantiated once, at module scope. `hour12: false` and Tokyo timezone are
- *  the two non-defaults that matter here. */
-const RESET_TIME_FORMAT = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-type Props = {
-  /** Unix seconds — the shape Phase 1's client returns. */
+type RateLimitPanelProps = {
+  /** Unix seconds at which the caller may try again (from `x-ratelimit-reset`). */
   resetAt: number;
+
+  /**
+   * Current time in Unix seconds. **Required** — this component is pure by
+   * design (a Server Component that may re-render), so it cannot call
+   * `Date.now()` itself (react-hooks/purity would fail). The calling page
+   * samples the clock once per request and passes it in; a test passes a
+   * fixed value.
+   *
+   * This is also why the panel receives `resetAt` and `now` separately
+   * rather than a pre-computed minute count — the two are the raw signals,
+   * and the panel does the formatting so the copy stays colocated with the
+   * only component that uses it.
+   */
+  now: number;
 };
 
-export function RateLimitPanel({ resetAt }: Props) {
-  // Unix seconds → milliseconds. Multiplying inside the render is fine; the
-  // formatter memoises internally.
-  const formattedTime = RESET_TIME_FORMAT.format(new Date(resetAt * 1000));
+export function RateLimitPanel({ resetAt, now }: RateLimitPanelProps) {
+  const secondsRemaining = resetAt - now;
 
   return (
-    <section className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-12 sm:px-6">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-        GitHub APIの利用制限に達しました
-      </h1>
-
-      <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
-        しばらくお待ちください。{formattedTime}（日本時間）以降に再度お試しいただけます。
-      </p>
-
-      <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-        GitHubの匿名アクセスは1時間あたりのリクエスト数が制限されています。時間が経てば自動的に復帰します。
-      </p>
-
-      <div className="pt-2">
-        <Link
-          href="/"
-          className="text-sm text-zinc-600 underline underline-offset-4 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-        >
-          検索に戻る
-        </Link>
-      </div>
+    <section
+      role="alert"
+      className="mx-auto max-w-2xl p-6 flex flex-col gap-2 border border-amber-400 rounded-md bg-amber-50 dark:bg-amber-950/30"
+    >
+      <h2 className="text-lg font-semibold">アクセス制限中</h2>
+      {secondsRemaining <= 0 ? (
+        <p className="text-sm">
+          現在リトライ可能です。もう一度検索してください。
+        </p>
+      ) : (
+        <p className="text-sm">
+          GitHubのAPIレート制限に達しました。あと約
+          {Math.max(1, Math.ceil(secondsRemaining / 60))}
+          分後にリトライ可能です。
+        </p>
+      )}
     </section>
   );
 }
