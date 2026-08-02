@@ -268,9 +268,24 @@ describe("githubFetch — path guard (SEC-03, T-01-05)", () => {
   it("does not echo the rejected path back into the error message", async () => {
     stubFetch();
 
-    await expect(
-      githubFetch({ ...SEARCH_CALL, path: "https://evil.example.com/x" })
-    ).rejects.not.toThrow(/evil\.example\.com/);
+    // Asserted with a substring check rather than a regex. The intent is
+    // "the host must not appear anywhere in the message", which an unanchored
+    // regex expresses correctly — but CodeQL's missing-regexp-anchor rule reads
+    // any unanchored regex tested against a URL as a bypassable security
+    // control, and it is right to do so in the general case. Using
+    // `toContain` states the same assertion with no regex to misread.
+    const error = await githubFetch({
+      ...SEARCH_CALL,
+      path: "https://evil.example.com/x",
+    }).then(
+      () => {
+        throw new Error("expected githubFetch to reject the absolute path");
+      },
+      (caught: unknown) => caught
+    );
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).not.toContain("evil.example.com");
   });
 });
 
