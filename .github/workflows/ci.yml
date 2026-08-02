@@ -36,7 +36,7 @@ jobs:
         run: npm run build
 
       - name: Upload build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: next-build
           # .next/cache is local build cache — large and useless to downstream jobs.
@@ -102,7 +102,7 @@ jobs:
         env:
           PLAYWRIGHT_PREBUILT: "1"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
