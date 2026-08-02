@@ -74,6 +74,8 @@
 
 - [ ] **DOC-01**: README covers setup, the optional token, and the reasoning behind key decisions
 - [ ] **DOC-02**: AI usage logged per process in Japanese and English
+- [ ] **DOC-07**: README is bilingual with Japanese first — the reviewers and the brief are Japanese, and the README is the first document read
+- [ ] **DOC-08**: README contains a self-contained AI usage summary — how AI was used, what the human decided, how it was verified — not only links to the per-process logs. The brief asks for the report to be summarised *in* the README (「利用方法のレポートをREADMEにまとめてください」)
 - [x] **DOC-03**: `docs/ARCHITECTURE.md` explains structure, data flow, and rejected alternatives
 - [x] **DOC-04**: `docs/OPERATIONS.md` records the observability and resilience policy
 - [x] **DOC-05**: `docs/SECURITY.md` records the threat model and security decisions
@@ -153,10 +155,12 @@ Deferred. Tracked but not in the current roadmap.
 | TEST-04 | Phase 4 | Pending |
 | DOC-01 | Phase 4 | Pending |
 | DOC-02 | Phase 4 | Pending |
+| DOC-07 | Phase 4 | Pending |
+| DOC-08 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 44 total
-- Mapped to phases: 44
+- v1 requirements: 46 total
+- Mapped to phases: 46
 - Unmapped: 0 ✓
 
 **Phase distribution:**
@@ -167,7 +171,7 @@ Deferred. Tracked but not in the current roadmap.
 | Phase 1 — GitHub API Client | API-01..API-05, TEST-01, OBS-01..OBS-03, SEC-03 | 10 |
 | Phase 2 — Search Experience | SRCH-01..SRCH-05, UX-01..UX-04, I18N-01 | 10 |
 | Phase 3 — Repository Detail Page | DTL-01..DTL-05, UX-05, TEST-02, SEC-02 | 8 |
-| Phase 4 — Quality Gate & Submission Readiness | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, SEC-01 | 7 |
+| Phase 4 — Quality Gate & Submission Readiness | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, DOC-07, DOC-08, SEC-01 | 9 |
 
 ---
 *Requirements defined: 2026-08-01*

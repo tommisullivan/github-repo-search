@@ -87,7 +87,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### Phase 4: Quality Gate & Submission Readiness
 **Goal**: The repository reads as production work to a reviewing engineer — accessible, responsive, covered, and explained
 **Depends on**: Phase 3
-**Requirements**: UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, SEC-01
+**Requirements**: UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, DOC-07, DOC-08, SEC-01
 **Success Criteria** (what must be TRUE):
   1. Search and detail are fully keyboard operable, every control has a labelled accessible name, heading structure is correct, and the axe check passes
   2. Both views are usable at mobile and desktop widths without horizontal scrolling or clipped content
@@ -95,7 +95,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. CI enforces a coverage threshold and fails the build below it
   5. `README.md` explains setup, the optional server-side token, and the reasoning behind the key decisions (no database, no auth, `subscribers_count`, no DAST)
   6. `docs/AI-USAGE.ja.md` and `docs/AI-USAGE.en.md` carry identical per-process entries, and the README links to them
-  7. Security response headers are configured — including a Content-Security-Policy that does not fall back to `unsafe-inline` — so the deployed app is not relying on framework defaults alone
+  7. `README.md` is bilingual with Japanese first, and carries a self-contained AI usage summary — how AI was used, what the human decided, how it was verified — so a reviewer reading only the README finds the report the brief asks for, not just links to it
+  8. Security response headers are configured — including a Content-Security-Policy that does not fall back to `unsafe-inline` — so the deployed app is not relying on framework defaults alone
 **Plans**: TBD
 **UI hint**: yes
 
@@ -120,9 +121,9 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1 | API-01, API-02, API-03, API-04, API-05, TEST-01, OBS-01, OBS-02, OBS-03, SEC-03 | 10 |
 | 2 | SRCH-01, SRCH-02, SRCH-03, SRCH-04, SRCH-05, UX-01, UX-02, UX-03, UX-04, I18N-01 | 10 |
 | 3 | DTL-01, DTL-02, DTL-03, DTL-04, DTL-05, UX-05, TEST-02, SEC-02 | 8 |
-| 4 | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, SEC-01 | 7 |
+| 4 | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, DOC-07, DOC-08, SEC-01 | 9 |
 
-**Total:** 44 of 44 v1 requirements mapped. No orphans, no duplicates.
+**Total:** 46 of 46 v1 requirements mapped. No orphans, no duplicates.
 
 ## Definition of Done — every phase, without exception
 
