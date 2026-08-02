@@ -24,7 +24,8 @@ Requirements: API-01, API-02, API-03, API-04, API-05, TEST-01, OBS-01, OBS-02, O
 
 ### Error vocabulary and language
 
-- **D-05:** The client returns stable machine-readable codes — `RATE_LIMIT`, `NOT_FOUND`, `INVALID_QUERY`, `NETWORK`. It returns no user-facing prose.
+- **D-05:** The client speaks four stable machine-readable codes — `RATE_LIMIT`, `NOT_FOUND`, `INVALID_QUERY`, `NETWORK` — and no user-facing prose.
+- **D-05a:** *(Corrected after planning caught a contradiction between D-03 and D-05.)* Only `RATE_LIMIT`, `NOT_FOUND`, and `INVALID_QUERY` can appear in a **returned** `Result` failure. `NETWORK` is carried by the **thrown** error, covering transport faults and unrecognised statuses. D-04's rationale is unaffected: `NETWORK` is precisely the case that needs no branching in `error.tsx`, because a generic retry message is the complete answer.
 - **D-06:** Japanese strings live in the UI layer (Phase 2+), which maps code → message. The client stays presentation-free.
 - **D-07:** Consequences that make this the right split: the client is testable without asserting on Japanese prose; translations sit beside the components that render them, where a reviewer will look; and the same code can drive different copy in different contexts.
 - **D-08:** `RATE_LIMIT` carries the reset time from `x-ratelimit-reset` so the UI can say *when* to retry, not merely that it failed.
@@ -33,7 +34,9 @@ Requirements: API-01, API-02, API-03, API-04, API-05, TEST-01, OBS-01, OBS-02, O
 
 - **D-09:** Search results revalidate after **60 seconds**; repository detail after **300 seconds**.
 - **D-10:** Rationale: search results shift as repositories are created and starred, so a minute is the tolerable staleness; detail changes slowly and is the page most likely to be reloaded during review. Different windows because the two have genuinely different volatility — a single number would be wrong for one of them.
-- **D-11:** Implemented with Next's `fetch` cache (`next: { revalidate }`), not a cache service. No infrastructure.
+- **D-11:** Implemented with Next's `fetch` cache, not a cache service. No infrastructure.
+- **D-11a:** *(Corrected during planning — verified against Next 16's own docs.)* `fetch` is **not cached by default** in Next 15+, so caching must be opted into explicitly (`cache: 'force-cache'` alongside `next: { revalidate }`). The earlier assumption that `revalidate` alone suffices came from Next 14 behaviour and would have silently produced an uncached app that burned quota on every render — passing CI, and only visible as rate-limit errors under use.
+- **D-11b:** Passing an `AbortSignal` (needed for the OBS-02 timeout) opts a request out of **memoization** — the per-render dedupe — which the docs state explicitly. They do not say it disables the persistent data cache. Losing memoization is harmless here because each endpoint is called once per render. Whether the data cache also opts out is unconfirmed and must be measured, not assumed.
 
 ### Pagination
 
