@@ -45,7 +45,27 @@ npm run dev      # http://localhost:3000
 トークンなしでも全機能が動作します。設定すると GitHub API のレート制限が緩和されます（未認証: 検索 約 10 リクエスト/分・REST 60 リクエスト/時 → 認証済み: 検索 約 30 リクエスト/分・REST 5,000 リクエスト/時）。
 
 - **サーバーサイド専用**です。`NEXT_PUBLIC_` を付けてはならず、クライアントバンドルには決して到達しません（GitHub への通信はすべて Server Component 上で行われます）。
-- 実際の値をコミットしてはいけません。設定方法は [`.env.example`](./.env.example) を参照してください。
+- 実際の値をコミットしてはいけません。`.env*` は `.gitignore` の対象で、[`.env.example`](./.env.example) だけが例外的にコミットされます。
+
+### 設定手順
+
+1. **トークンを発行します。** GitHub の [Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens) から作成します。**スコープ（権限）は一つも不要です。** 本アプリは公開リポジトリを読むだけで、認証済みリクエストであれば権限の有無にかかわらず上限が緩和されます。付けるスコープが少ないほど、漏洩したときの被害も小さくなります。
+
+2. **テンプレートをコピーして環境変数ファイルを作ります。** ファイル名は `.env.local` です（Next.js がローカル開発で読み込むファイル名。`.env.example` はテンプレートであり、そのままでは読み込まれません）。
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+3. **作成した `.env.local` にトークンを記入します。** 引用符もスペースも不要です。
+
+   ```
+   GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+   ```
+
+4. **開発サーバーを再起動します。** 環境変数は起動時に読み込まれるため、起動中に書き換えても反映されません。
+
+起動時に `Environments: .env.local` と表示されれば読み込まれています。値が空、あるいはファイル名が違う場合でもアプリはエラーにならず、未認証のまま（低い上限で）動作します。レート制限に頻繁に当たる場合は、まずこのファイル名を確認してください。
 
 ## 主要な設計判断とその理由
 
@@ -199,7 +219,27 @@ npm run dev      # http://localhost:3000
 Everything works without a token. Setting one raises GitHub's rate limits (unauthenticated: ~10 search requests/min and 60 core REST requests/hour → authenticated: ~30 search requests/min and 5,000 core requests/hour).
 
 - **Server-side only.** It is never prefixed `NEXT_PUBLIC_` and never reaches the client bundle — all GitHub traffic happens in Server Components.
-- Never commit a real value. See [`.env.example`](./.env.example) for setup.
+- Never commit a real value. `.env*` is gitignored; only [`.env.example`](./.env.example) is committed, as a template.
+
+### Setting one up
+
+1. **Create the token.** GitHub → [Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens). **No scopes are required.** This app only reads public repositories, and any authenticated request gets the higher limit regardless of what the token is allowed to do. Fewer scopes means less damage if it leaks.
+
+2. **Copy the template to the file Next.js actually reads.** That file is `.env.local` — `.env.example` is a template and is not loaded.
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+3. **Put the token in `.env.local`.** No quotes, no spaces.
+
+   ```
+   GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+   ```
+
+4. **Restart the dev server.** Environment variables are read at startup, so editing the file while it runs changes nothing.
+
+You will see `Environments: .env.local` in the startup output when it has been picked up. If the value is empty or the filename is wrong, nothing errors — the app just runs unauthenticated on the lower limits. If you are hitting rate limits often, check the filename first.
 
 ## Key decisions, with reasons
 
