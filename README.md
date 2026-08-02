@@ -150,14 +150,6 @@ UI 文言はすべて日本語、コード・コメント・コミットはす�
 - **リリースノート／変更履歴。** マージ済み PR から利用者向けの記述を生成する。事実はすべて履歴の中にあり、書き写す作業だけが残っています。
 - **ドキュメントの乖離検出。** コードと README・仕様書がずれた箇所を指摘する。本リポジトリでも「Phase 3 で解決済みなのに『Phase 3 の課題だから未対応』と書かれたままのコメント」が実際に発生しました（`ResultList.tsx` のアバターの件）。
 
-**エージェントの種類そのものより、その周囲の条件のほうが重要です。**
-
-- **権限は最小限に、そして明示的に決める。** エージェントにコードベースを読ませるか否かは、技術的な問いというより機密情報と知的財産の問いです。「会社によりけり」は後回しにしてよい細部ではなく、前提条件そのものです。
-- **運用面の自動復旧と、コード変更は別の話。** サービスの再起動、デプロイのロールバック、トラフィックの切り替え、インスタンスの入れ替え — これらは可逆で、挙動がよく理解されており、影響範囲も限定されます。しかも自動化しなければ、10 分後に人間が深夜に同じ操作をするだけです。この領域の自動化はすでに確立した実務であり、クラウド事業者も長くその基盤を提供しています。ここに AI エージェントの権限を認めてよいかは、エージェントの性能よりも**その周囲のプロセスがどれだけ成熟しているか**で決まります — 対処によって事態が悪化したことを検知できる指標があるか、切り戻しは自動か、影響範囲に上限があるか、いずれにせよ人間が呼び出されるか、何をなぜ実行したかの記録が残るか。これらが既に整っている組織であれば、同じ権限をエージェントに広げることは飛躍ではなく延長線上の一歩です。整っていないのであれば、先に手を入れるべきはエージェントではありません。
-- **コード変更のほうが基準は厳しい。** 正しさをヘルスチェックの指標で確認することはできませんし、誤った変更は誤った再起動ほどきれいにロールバックできません。修正を提案し、適用は人間が行う、という既定値のほうが安全です。本リポジトリの「エージェントは決してマージしない」と同じ理由です。
-- **エージェントにも監査証跡を。** どのエージェントが、いつ、何を根拠にそう判断したかが残らなければ、レビューのしようがありません。本リポジトリの AI 利用ログと同じ発想です。
-- **ノイズは注意力というコストを消費する。** 精度の低いチケットを大量に起票するエージェントは、置かないほうがましになり得ます。人間の注意力こそが希少な資源だからです。導入初期は「起票せず提案だけ」から始め、精度を測ってから権限を広げると、そのコストが見える形で管理できます。
-
 ## 補足
 
 - `next@16.2.12` が固定する `postcss@8.4.31` と `sharp@0.34.5` には既知のアドバイザリがあります。上流の未リリース 16.3 プレビューと同じ修正を `package.json` の `overrides` で適用しており、`npm audit` は脆弱性 0 件です。
@@ -312,13 +304,6 @@ This assignment is a single application, but the same thinking extends to real o
 - **Release notes and changelogs.** Generate the user-facing description from merged PRs. Every fact is already in the history; only the transcription is left.
 - **Documentation-drift detection.** Flag where code and the README or specs have diverged. This repository produced a real instance: a comment saying a thing was "deliberately not here because that is Phase 3's concern" survived Phase 3 shipping (the avatars in `ResultList.tsx`).
 
-**What matters more than the list of agents is the conditions around them.**
-
-- **Least privilege, decided explicitly.** Whether an agent may read the codebase is less a technical question than a confidentiality and IP one. "It depends on the company" is not a detail to settle later; it is the precondition.
-- **Operational remediation is a different case from code changes.** Restarting a service, rolling back a deploy, shifting traffic, replacing an instance — these are reversible, well understood, and bounded in blast radius, and the alternative is often a person performing the identical action ten minutes later at 3am. Automating them is established practice, and the cloud providers have shipped the primitives for it for years. Whether an AI agent can be given that authority depends much less on the agent than on **how mature the process around it already is**: is there a health signal that would notice the action made things worse, does reversal happen automatically, is the blast radius capped, is someone paged regardless, and is there a record of what was done and why. Where those are already in place, extending the same authority to an agent is an incremental step rather than a leap. Where they are not, the agent is not the thing to fix first.
-- **Code changes are the stricter case.** Correctness cannot be confirmed by a health metric, and a bad change is not undone by a rollback as cleanly as a bad restart is. Proposing the fix and leaving a human to apply it remains the safer default — the same reasoning as this repository's never-merge rule.
-- **Agents need an audit trail too.** If there is no record of which agent concluded what, when, and on what evidence, there is nothing to review. Same idea as the AI usage log here.
-- **Noise costs attention.** An agent filing many low-precision tickets can be worse than no agent, because attention is the scarce resource. Starting in propose-only mode, measuring precision, and widening permissions afterwards keeps that cost visible.
 
 ## Notes
 
