@@ -137,7 +137,38 @@ Full model in [`docs/SECURITY.md`](docs/SECURITY.md); the rules that bind code:
 - Small, atomic commits with an imperative subject describing the change.
 - Never commit secrets, `.env*` files, or `node_modules`.
 - The working tree must be green (`test`, `lint`, `typecheck`) before committing.
-- No GitHub remote is configured yet — this is intentional, local-only for now.
+
+## Every change goes through a pull request
+
+**No direct commits to `main` or `develop`. Ever.** This applies to one-line fixes, documentation, and "obvious" changes alike — the moment there is an exception, the rule stops meaning anything and the branch protection that enforces it becomes theatre.
+
+### The workflow
+
+1. Branch from `develop`: `feature/<short-name>`, `fix/<short-name>`, or `docs/<short-name>`.
+2. Commit in small, atomic steps.
+3. **Verify locally before opening the PR** — see below. Do not delegate this to CI.
+4. Open the PR into `develop`. Fill in the template's verification section with the commands you ran and their real results.
+5. `CI Gate` must be green. A red or pending gate is not a merge candidate.
+6. Merge to `develop`. `main` receives changes only from `develop`, by PR.
+
+### Verify before opening a PR — not after
+
+Run the full gate and read the output:
+
+```bash
+nvm use
+npm run lint && npm run typecheck && npm run test:coverage && npm run build
+npm run test:e2e && npm run test:a11y && npm audit --audit-level=high
+```
+
+Rules about this, in order of how often they are broken:
+
+- **Evidence before assertion.** "Tests pass" is a claim you may only make after running them in this session and reading the output. Not "it should pass", not "the change is trivial".
+- **A failing check is never someone else's problem.** Fix it or say plainly in the PR that it is broken and why.
+- **CI is a second opinion, not the first.** Opening a PR to find out whether it works wastes runner minutes and puts a broken state on a shared branch.
+- **Never force-push to `main` or `develop`,** and never bypass branch protection even when you can.
+
+If a change genuinely cannot be verified locally, say so explicitly in the PR rather than implying it was checked.
 
 ## AI usage log (required)
 

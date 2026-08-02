@@ -53,6 +53,7 @@ A reviewer can search for a repository, open its detail page, and find the code 
 - **Tech stack**: Node 24.18.1, pinned in `.nvmrc` and enforced by `engines: >=22`. Next 16 needs `>=20.9`, but Node 20 and 18 are both end-of-life and receive no security updates.
 - **Quality**: Test code ships with features, not after — explicit brief requirement.
 - **Process**: Every completed process appends to both AI usage logs before commit.
+- **Process**: All changes reach `develop` and `main` through a pull request. No direct commits to either branch, and the full local gate must pass before the PR is opened.
 - **Security**: Any GitHub token is server-side only, never `NEXT_PUBLIC_`, never committed.
 - **Dependencies**: `npm audit` stays at zero vulnerabilities.
 
