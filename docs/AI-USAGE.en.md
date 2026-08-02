@@ -351,4 +351,70 @@ The brief is short, and the strongest temptation in a task like this is to add t
 
 ---
 
+## Process 10: Pre-submission review pass — a security finding logged rather than fixed, and a search button that makes Enter work
+
+- **Date:** 2026-08-02
+- **Tool:** Claude Opus 5 (1M context), plus two `general-purpose` sub-agents — one to find security vulnerabilities, one adversarially tasked with *refuting* the finding the first produced.
+- **Delegated to AI:**
+  1. A security review of the whole `src/` surface. The branch diff was empty (`develop` in sync with origin), so a diff-scoped review would have returned zero findings and proved nothing; the scope was widened to the current security-relevant code instead, and the deviation stated up front rather than hidden.
+  2. Wrote `.planning/phases/04-quality-gate-submission-readiness/deferred-items.md` recording the one finding with its full reproduction and fix.
+  3. Added a submit button to `src/components/SearchInput.tsx`, restructured the control as a real `<form>`, moved the 「キーワード」 label into the component, updated `src/app/page.tsx`, and added six unit tests plus two E2E tests.
+- **Why this approach:**
+  - **Two sub-agents, the second told to refute the first.** A single finder reports what it hopes to find. The verifier was given the hard exclusion list and the explicit precedent that *open redirects should not be reported unless extremely high confidence*, and told to default to "false positive". It came back REAL at 9/10 having reproduced the redirect in real Chromium — and corrected the finder on a material point: the finder claimed a plain left-click would soft-navigate internally and *not* fire the redirect, so only modified-clicks were exploitable. That is wrong. `isLocalURL()` short-circuits on `!isAbsoluteUrl(url)`, so an ordinary click on a fully hydrated page lands on the attacker origin. The adversarial pass made the finding *worse*, not softer, which is the outcome that justifies running it.
+  - **A real `<form>`, not an `onKeyDown` handler.** Enter working in a search box *is* implicit form submission. Hand-rolling `if (e.key === "Enter")` would duplicate what the platform already does, and would silently miss the button, IME composition, and the `search` landmark. Rejected.
+  - **`replace`, not `push`, on submit.** Considered and rejected: typing already uses `replace` (D-03), so a `push` on submit would mean Back behaved differently depending on whether the user typed or clicked, and clicking 検索 right after typing would create a duplicate history entry to the identical URL — Back would appear to do nothing.
+  - **Both paths funnel through one `navigate` callback**, so the debounce and the button cannot drift apart about what URL a keyword maps to. A test asserts the redundant post-submit debounce fire lands on the identical URL.
+  - **The label moved into `SearchInput` because the old markup became invalid.** `page.tsx` wrapped the input in a `<label>`; a `<form>` is flow content and cannot legally nest inside one. Association is by `htmlFor`/`id` now. The input keeps `aria-label="リポジトリを検索"`, so the accessible name is unchanged and every existing E2E selector still resolves — deliberately not "improved" in the same commit.
+  - **Enter is proven in E2E, not in a unit test.** jsdom does not implement implicit form submission, so a unit test *cannot* prove the behaviour the user asked for. The unit tests cover the click and the submit handler; a Playwright test in a real browser covers Enter. Claiming Enter worked on the strength of a jsdom test would have been a false claim.
+- **Human decisions:**
+  - **Deferring the security finding.** Told in their own words: *"if its just a medium just ignore it for now but keep a log somewhere."* The AI did not decide this and did not argue it down — the finding is a genuine bypass of a guard written for exactly this attack, and it is recorded as such. What made it a defensible call, and is stated in the log: the app has no session, no cookie, no auth token and no OAuth flow, so the impact is phishing/reputation pivot rather than account takeover.
+  - **Asking for the search button at all**, and the reason for it: *"so it at least looks ok UX wise."* The functional gap — Enter doing nothing in a search box — was found while implementing it, not requested.
+  - The scope stayed where the human put it: WR-02 (the back/forward input desync from `04-REVIEW.md`) lives in the same file and was **not** fixed here, because it was not asked for.
+- **Review:** Every command run in this session on Node 24.18.1, output read:
+  - `npm run lint` — clean. `npm run typecheck` — clean.
+  - `npm test` — **206 passed** (19 files), up from 200; the six new tests are the delta.
+  - `npm run test:coverage` — 96.45% statements / 94.11% branches / 92.85% functions / 96.41% lines, thresholds held; `SearchInput.tsx` at **100% across all four**.
+  - `npm run build` — clean.
+  - `npm run test:e2e` — **19 passed** (9.7s), up from 17; the two new keyboard tests are the delta and both pass.
+  - `npm run test:a11y` — **7 passed**, zero violations. The new button and the relocated label introduce none.
+  - `npm audit --audit-level=high` — **found 0 vulnerabilities**.
+  - Rendered and inspected the result at 1280×800 and 375×667 against a production build with the fixture mock: the button does not wrap, overflow, or crowd the input at mobile width.
+  - The security finding itself was independently re-verified before being written down — the regex behaviour re-run directly and the taint path re-traced through `page.tsx:58` → `RepoDetail.tsx:53` — rather than taken on the sub-agents' word.
+- **Taken as-is vs modified:**
+  - **The finder sub-agent's exploit description was corrected by the verifier and the corrected version is what shipped into the log.** The finder said a plain hydrated left-click was safe and only modified-clicks or pre-hydration clicks exploited it; that understated the bug. `deferred-items.md` records the accurate version.
+  - **The keyboard E2E spec's central assertion had to be rewritten, not just extended.** It asserted "exactly one Tab from the input reaches the first result link — no intermediate stops". The button *is* a new stop, so that sentence became false. It was changed to assert the new order explicitly (input → 検索 → first result) rather than deleted or loosened, because the assertion's purpose is catching a stray or dead tab stop and that purpose survives.
+  - The redundant `router.replace` after a submit was **left in place rather than engineered away**. Cancelling the in-flight debounce would mean restructuring the hook; the second call resolves to a byte-identical URL. That is a deliberate trade, so a test pins it — if the two paths ever diverge, that test fails.
+
+---
+
+## Process 11: Four UX gaps found by actually using the app — pagination at both ends, a real page count, sorting by stars, and the avatar that was never there
+
+- **Date:** 2026-08-02
+- **Tool:** Claude Opus 5 (1M context). No sub-agents — this was direct implementation against a running app, and the feedback loop was the human using it.
+- **Delegated to AI:** Implemented four changes the human found by driving the app: a second pagination control above the result list; a real page count (`1 / 50 ページ`) instead of `1 ページ目`; a 並び替え control offering relevance or stars; and owner avatars on each result row. Added `src/lib/searchUrl.ts`, 8 unit tests for it, and updated `search.ts`, `page.tsx`, `Pagination.tsx`, `SearchInput.tsx`, `ResultList.tsx`, `types/github.ts` and five test files.
+- **Why this approach:**
+  - **One shared URL builder (`src/lib/searchUrl.ts`) rather than adding `sort` in four places.** The input, the sort control, both pagination copies and the detail back-link all build a search URL. Adding a parameter to four hand-rolled template strings has a specific, silent failure: change the sort, click 次へ, and the sort is gone because the pagination link never knew about it. The module is deliberately framework-free so the Client Component and the Server Components can share one definition — which is also why `SearchSort` lives there and not in the server-only `lib/github/search.ts`.
+  - **`totalPages` is derived in the search unit, from the clamped count.** 7,116,211 matches ÷ 20 is 355,811 pages, but GitHub refuses result 1001, so only 50 are reachable. Computing it in the view from `totalCount` would print page numbers that error when navigated to. Rejected. The view instead states the limit in Japanese when the two numbers diverge, because 「全 7,116,211 件」 sitting next to 「1 / 50 ページ」 with no explanation reads as a bug.
+  - **The duplicate pagination is not a copy-paste.** Two `<nav>`s with the same accessible name is an axe `landmark-unique` violation, and two `aria-live` regions announce the page change twice. `position` is a required prop precisely so a caller cannot render an unlabelled duplicate by forgetting it: it disambiguates the landmark name (上部/下部) and gives the live region to the top copy only.
+  - **`sort=best-match` is never sent.** GitHub has no such value — relevance is the *absence* of the parameter, so the default branch omits `sort` and `order` entirely rather than sending a literal that would 422. `parseSort` closes the union so only a value from `SORT_OPTIONS` can reach GitHub.
+  - **The sort `<select>` is driven by the URL prop, not local state.** This is the same class of bug as WR-02 in `04-REVIEW.md` (the input desyncing on Back). Reading from the prop means Back to a differently-sorted URL updates the control for free. It navigates on change rather than requiring a second click on 検索 — a sort control that needs confirming reads as broken.
+  - **The avatar's absence had a stale reason.** `ResultList.tsx` said the avatar was "deliberately not here" because remote images need `images.remotePatterns` allowlisted and that was Phase 3's concern. Phase 3 shipped; the host is allowlisted and `RepoDetail` already renders through `next/image`. The comment had outlived its truth. It now uses the same host, the same `alt` convention and the same component as the detail view — no new host, no new dependency.
+- **Human decisions:**
+  - Found all four problems by using the running app, which is the part no amount of green CI substitutes for. The pagination reason was theirs and specific: *"you have to scroll down to the bottom to press next page."*
+  - Asked whether star sorting was even possible before asking for it — the feasibility question was theirs, and the answer (`sort=stars&order=desc`) determined the design.
+  - **Not recorded here: a second issue the human mentioned but did not describe** (*"there are two issues"* — only the scroll-to-paginate one was stated). Left open rather than guessed at.
+- **Review:** Every command run this session on Node 24.18.1, output read:
+  - `npm run lint` clean; `npm run typecheck` clean.
+  - `npm test` — **243 passed** (20 files), up from 206.
+  - `npm run test:coverage` — 96.75% statements / 94.11% branches / 93.65% functions / 96.69% lines; thresholds held. `search.ts` remains at 100% on all four.
+  - `npm run build` clean; `npm run test:e2e` — **20 passed**; `npm run test:a11y` — **7 passed, zero violations** (the duplicate landmark and the new `<select>` introduce none).
+  - **Verified against the real GitHub API, not just the mock.** `?q=react&sort=stars` returned freeCodeCamp (453,346) → react (246,852) → next.js (141,221), i.e. genuinely descending; the ceiling note rendered for a 7,116,211-match keyword; and a DOM check confirmed **20 of 20 avatar images decoded** (`complete && naturalWidth > 0`) rather than trusting a screenshot.
+- **Taken as-is vs modified:**
+  - **Two E2E specs asserted things that the new controls made false, and both were rewritten rather than loosened.** `keyboard.spec.ts` claimed one Tab from the input reached the first result; there are now four controls in between, so it enumerates each stop by name. `search-detail.spec.ts` used a bare `次へ` locator that became a Playwright strict-mode violation with two paginations; it is now scoped to the top landmark, which is also the behaviour worth testing.
+  - **A real cost is recorded rather than hidden:** a keyboard user now passes four controls (検索, 並び替え, 前へ, 次へ) before the first result. That is the price of top pagination given D-19 keeps the disabled 前へ focusable. The spec comment states it so the trade is visible to a reviewer instead of being discovered later.
+  - **The E2E mock needed no change** — it already routes `avatars.githubusercontent.com` to a transparent PNG (D4-04), so twenty new remote images per page did not make the suite hit the network. Checked before assuming.
+  - `page.test.tsx`'s result factory grew explicit `reachableCount`/`totalPages` defaults rather than computing them, so a test about the ceiling has to state the ceiling.
+
+---
+
 <!-- Append the next process here -->
