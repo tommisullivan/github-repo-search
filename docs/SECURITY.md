@@ -2,7 +2,7 @@
 
 The threat model for this app and the decisions that follow from it. Reasoning and policy; the code lands in the phases named against each item.
 
-> **Status:** the security posture below is partly built (dependency scanning, secret handling, CI gates) and partly specified for later phases (response headers, image host allowlist). Each item says which.
+> **Status:** built. Dependency scanning, secret handling, CI gates, the image host allowlist, and the response headers are all shipped; the response headers are additionally measured against the production build by `e2e/security-headers.spec.ts`, not assumed from configuration.
 
 ## What there is to protect
 
@@ -60,17 +60,40 @@ This is a guardrail, not a security boundary — a determined process could stil
 
 ## Response headers
 
-`next.config.ts` is currently empty, which means the app ships framework defaults and nothing more. For a production deployment the following belong there (Phase 4):
+Shipped (Phase 4). Every HTML response carries a nonce-based Content-Security-Policy; every response carries the four static headers below. The headers live in two places, deliberately:
 
-| Header | Value | Reason |
-|---|---|---|
-| `Content-Security-Policy` | `default-src 'self'`, with `img-src` extended to GitHub's avatar host | The main control worth having here. The app loads no third-party scripts, so a strict policy costs nothing and blocks injected script execution outright |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Only meaningful once served over HTTPS from a real domain |
-| `X-Content-Type-Options` | `nosniff` | Prevents MIME-type confusion |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Avoids leaking full URLs — including search terms — to third parties |
-| `X-Frame-Options` / `frame-ancestors` | `DENY` / `'none'` | No reason for this app to be framed |
+- **The CSP is set per request by [`src/proxy.ts`](../src/proxy.ts)** — Next 16's proxy convention (middleware, renamed). It embeds a fresh nonce on every request, which a static header cannot do; Next parses the nonce out of the CSP header and stamps it onto its framework scripts, bundles, and inline scripts automatically. Policy construction is delegated to the pure builder in [`src/lib/csp.ts`](../src/lib/csp.ts), whose unit tests pin the shape — above all that **`script-src` never contains `'unsafe-inline'`**, so any future loosening fails a named test rather than shipping silently.
+- **The static headers are set for every path by `next.config.ts` `headers()`**, importing the list from `src/lib/csp.ts` (single source of truth). They are per-deployment constants — recomputing them per request in the proxy would buy nothing, and `headers()` also covers paths the proxy matcher skips (static assets, prefetches).
 
-CSP with Next's inline styles and hydration scripts needs a nonce to be strict rather than `unsafe-inline`; that is the work in Phase 4, and doing it carelessly produces a policy that looks strict but is not.
+The production policy, exactly as shipped (`{nonce}` is fresh per request):
+
+```
+default-src 'self'; script-src 'self' 'nonce-{nonce}' 'strict-dynamic'; style-src 'self' 'nonce-{nonce}' 'unsafe-hashes' 'sha256-zlqnbDt84zf1iSefLU/ImC54isoprH/MRiVZGskwexk='; img-src 'self' data: https://avatars.githubusercontent.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+```
+
+In development — and only there — `script-src` additionally carries `'unsafe-eval'`, because React uses `eval` to reconstruct server-side error stacks in the browser. The E2E spec asserts it is absent from the production build.
+
+| Header | Value | Set by | Reason |
+|---|---|---|---|
+| `Content-Security-Policy` | above | `src/proxy.ts` | Blocks injected script execution outright: an attacker's script would need the per-request nonce. `'strict-dynamic'` propagates trust from the nonce'd bootstrap to the chunks it loads |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | `next.config.ts` | Only meaningful once served over HTTPS from a real domain — browsers ignore HSTS on plain HTTP, so it ships inert locally and binds on deployment |
+| `X-Content-Type-Options` | `nosniff` | `next.config.ts` | Prevents MIME-type confusion |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | `next.config.ts` | Avoids leaking full URLs — including search terms — to third parties |
+| `X-Frame-Options` / `frame-ancestors` | `DENY` / `'none'` | `next.config.ts` / CSP | No reason for this app to be framed. `frame-ancestors` is the modern control; `X-Frame-Options` covers older UAs |
+
+No `connect-src` allowance for `api.github.com`: all GitHub traffic is server-side, the browser never calls GitHub, and the CSP governs the browser. This was confirmed by measurement, not assumed.
+
+### Measured, not assumed
+
+This document warned that a carelessly built CSP "looks strict but is not", so the policy is driven, not merely configured: [`e2e/security-headers.spec.ts`](../e2e/security-headers.spec.ts) loads both views from the production build with `securitypolicyviolation`, `pageerror`, and console listeners armed, asserts the exact header values, asserts the nonce differs between requests, and requires **zero CSP violations while the pages load, hydrate, and respond to interaction** (typing in the search input drives a client-side navigation; the detail view's back link navigates) — so "no violations" cannot mean "nothing executed". Findings:
+
+- **`style-src` needed one measured concession — for styles only.** The strict form `style-src 'self' 'nonce-…'` blocked the `style="color:transparent"` attribute `next/image` renders on the avatar (reported as `directive=style-src-attr blocked=inline` on the detail view). A style *attribute* cannot carry a nonce, so the policy adds `'unsafe-hashes'` plus the sha256 of that exact declaration — allowing precisely one known declaration, not arbitrary inline styles. The styles-only `'unsafe-inline'` last resort was **not** needed, and `script-src` was never touched.
+- **The statically prerendered global `/_not-found` runs without scripts, accepted and recorded.** It is generated at build time, when no request — and therefore no nonce — exists, so the CSP blocks its bootstrap (its chunk loads, inline scripts, and inline styles are all refused). Its content still renders completely, and it is static markup with nothing interactive to lose, so this is accepted rather than forcing the route dynamic for no user-visible gain. The *designed* not-found page (リポジトリが見つかりません) lives inside the dynamic detail route, receives its nonce normally, and is violation-free.
+
+### Rejected alternatives
+
+- **CSP via `next.config.ts` `headers()` alone.** A static header cannot carry a per-request nonce, and Next's documented no-nonce path requires `script-src 'unsafe-inline'` — the exact thing this policy exists to forbid.
+- **Experimental SRI (`experimental.sri`).** Would allow static generation under a strict CSP, but shipping an experimental framework flag in a submission graded as production code is the wrong risk. Nonces are the stable, documented mechanism.
 
 ## Dependency and supply-chain security
 
