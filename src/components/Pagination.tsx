@@ -37,6 +37,11 @@ export function Pagination({ q, page, hasNextPage }: PaginationProps) {
         <span
           role="link"
           aria-disabled="true"
+          // tabIndex keeps the disabled endpoint in the tab order — D-19's
+          // "stable tab order across pages" needs focusability, not just DOM
+          // presence, or the sequence shifts between page 1 and page 2
+          // (Phase 4 UX-06 audit finding).
+          tabIndex={0}
           className="text-sm text-zinc-400 dark:text-zinc-600"
         >
           前へ
@@ -59,6 +64,8 @@ export function Pagination({ q, page, hasNextPage }: PaginationProps) {
         <span
           role="link"
           aria-disabled="true"
+          // Same rationale as the disabled "前へ" above (D-19 / UX-06).
+          tabIndex={0}
           className="text-sm text-zinc-400 dark:text-zinc-600"
         >
           次へ

@@ -134,13 +134,17 @@ async function renderSearchResults(q: string, page: number) {
   // Pagination lives only in the happy branch — a user on the empty,
   // rate-limited, or invalid-query state has no page-2 to visit, so a
   // disabled control there would be visual noise (SRCH-04).
+  //
+  // The wrapper is a labelled <section> (region landmark), not a bare <div>,
+  // so a screen-reader user can jump to the answer by landmark the same way
+  // the state panels are reachable via their status/alert roles (UX-06).
   return (
-    <div className="flex flex-col gap-4">
+    <section aria-label="検索結果" className="flex flex-col gap-4">
       <p className="px-6 text-sm text-zinc-600 dark:text-zinc-400">
         全 {totalCount.toLocaleString("ja-JP")} 件中 {start}〜{end} 件
       </p>
       <ResultList items={items} currentSearchUrl={currentSearchUrl} />
       <Pagination q={q} page={currentPage} hasNextPage={hasNextPage} />
-    </div>
+    </section>
   );
 }

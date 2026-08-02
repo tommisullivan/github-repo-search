@@ -140,6 +140,25 @@ describe("<RepoDetail> — navigation", () => {
       screen.getByText("The library for web and native user interfaces.")
     ).toBeInTheDocument();
   });
+
+  it("renders no description paragraph when description is null", () => {
+    // Closes the STATE.md deferred item: the `description: null` branch had
+    // no dedicated test (75% branch coverage on this file after Phase 3).
+    const { container } = render(
+      <RepoDetail repo={detailFixture({ description: null })} backHref="/" />
+    );
+
+    // The description text is absent…
+    expect(
+      screen.queryByText("The library for web and native user interfaces.")
+    ).not.toBeInTheDocument();
+
+    // …and no empty element sits where the paragraph would render: every
+    // paragraph in the tree carries real content (owner login, fullName, …).
+    for (const paragraph of Array.from(container.querySelectorAll("p"))) {
+      expect(paragraph.textContent?.trim()).not.toBe("");
+    }
+  });
 });
 
 describe("<RepoDetail> — accessibility structure", () => {
