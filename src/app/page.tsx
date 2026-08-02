@@ -24,6 +24,7 @@ import { Pagination } from "@/components/Pagination";
 import { RateLimitPanel } from "@/components/RateLimitPanel";
 import { ResultList } from "@/components/ResultList";
 import { SearchInput } from "@/components/SearchInput";
+import { buildSearchUrl, parseSort, type SearchSort } from "@/lib/searchUrl";
 
 /**
  * Derived from the exported client constants — never written as `50` literally.
@@ -53,6 +54,7 @@ export default async function Home({ searchParams }: SearchPageProps) {
   const params = await searchParams;
   const q = readParam(params.q);
   const page = parsePage(readParam(params.page));
+  const sort = parseSort(readParam(params.sort));
 
   const trimmedQ = q.trim();
   const isBlankQuery = trimmedQ === "";
@@ -67,25 +69,29 @@ export default async function Home({ searchParams }: SearchPageProps) {
   ) : isOutOfRangePage ? (
     <InvalidQueryNotice reason="out-of-range" />
   ) : (
-    await renderSearchResults(trimmedQ, page)
+    await renderSearchResults(trimmedQ, page, sort)
   );
 
   return (
     <main className="mx-auto max-w-3xl w-full flex flex-col gap-4 p-6">
       <h1 className="text-2xl font-semibold">GitHubリポジトリ検索</h1>
 
-      <label className="flex flex-col gap-2">
-        <span className="text-sm">キーワード</span>
-        <SearchInput initialQuery={q} />
-      </label>
+      {/* The label lives inside SearchInput: the component now renders a
+          <form>, which is flow content and cannot legally nest inside a
+          <label>. The association is by htmlFor/id instead of wrapping. */}
+      <SearchInput initialQuery={q} sort={sort} />
 
       {content}
     </main>
   );
 }
 
-async function renderSearchResults(q: string, page: number) {
-  const result = await searchRepositories(q, page);
+async function renderSearchResults(
+  q: string,
+  page: number,
+  sort: SearchSort
+) {
+  const result = await searchRepositories(q, page, sort);
 
   if (!result.ok) {
     switch (result.error.code) {
@@ -119,6 +125,8 @@ async function renderSearchResults(q: string, page: number) {
   const {
     items,
     totalCount,
+    reachableCount,
+    totalPages,
     page: currentPage,
     hasNextPage,
   } = result.data;
@@ -129,7 +137,14 @@ async function renderSearchResults(q: string, page: number) {
 
   const start = (currentPage - 1) * SEARCH_PER_PAGE + 1;
   const end = start + items.length - 1;
-  const currentSearchUrl = `/?q=${encodeURIComponent(q)}&page=${currentPage}`;
+  const currentSearchUrl = buildSearchUrl({ q, page: currentPage, sort });
+
+  // A broad keyword matches far more than GitHub will serve. Saying
+  // 「全 48,283 件」 next to 「1 / 50 ページ」 invites the obvious question —
+  // 48,283 ÷ 20 is 2,415, so where did the other 2,365 pages go? The answer is
+  // an upstream limit, so the UI states it rather than leaving the two numbers
+  // to contradict each other.
+  const isCountClamped = reachableCount < totalCount;
 
   // Pagination lives only in the happy branch — a user on the empty,
   // rate-limited, or invalid-query state has no page-2 to visit, so a
@@ -142,9 +157,39 @@ async function renderSearchResults(q: string, page: number) {
     <section aria-label="検索結果" className="flex flex-col gap-4">
       <p className="px-6 text-sm text-zinc-600 dark:text-zinc-400">
         全 {totalCount.toLocaleString("ja-JP")} 件中 {start}〜{end} 件
+        {isCountClamped ? (
+          <>
+            <br />
+            <span className="text-zinc-500 dark:text-zinc-500">
+              GitHubの仕様により、表示できるのは先頭{" "}
+              {reachableCount.toLocaleString("ja-JP")} 件（{totalPages}{" "}
+              ページ）までです。
+            </span>
+          </>
+        ) : null}
       </p>
+
+      {/* Two copies, top and bottom: 20 results is taller than a viewport, so
+          a single control at the end meant scrolling past everything to reach
+          the next page. See the Pagination file header for what makes the
+          duplicate legal for a screen-reader user. */}
+      <Pagination
+        q={q}
+        page={currentPage}
+        hasNextPage={hasNextPage}
+        totalPages={totalPages}
+        sort={sort}
+        position="top"
+      />
       <ResultList items={items} currentSearchUrl={currentSearchUrl} />
-      <Pagination q={q} page={currentPage} hasNextPage={hasNextPage} />
+      <Pagination
+        q={q}
+        page={currentPage}
+        hasNextPage={hasNextPage}
+        totalPages={totalPages}
+        sort={sort}
+        position="bottom"
+      />
     </section>
   );
 }

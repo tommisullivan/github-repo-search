@@ -107,7 +107,14 @@ test("pagination reaches page 2 of the fixture set through the mock", async ({
 }) => {
   await page.goto("/?q=fixture-alpha");
 
-  await page.getByRole("link", { name: "次へ" }).click();
+  // Scoped to the top landmark: there are two pagination controls now, one at
+  // each end of the list, so a bare 次へ is ambiguous. Using the top copy is
+  // also the point of the change — reaching page 2 without scrolling past
+  // twenty results first.
+  const topPagination = page.getByRole("navigation", {
+    name: "ページ移動（上部）",
+  });
+  await topPagination.getByRole("link", { name: "次へ" }).click();
 
   await expect(page).toHaveURL(/\?q=fixture-alpha&page=2/);
 
@@ -116,5 +123,23 @@ test("pagination reaches page 2 of the fixture set through the mock", async ({
   await expect(
     page.getByRole("link", { name: "e2e-fixture/repo-filler-20" })
   ).toBeVisible();
+  await expect(page.getByText("全 25 件中 21〜25 件")).toBeVisible();
+
+  // 25 results at 20 per page is two pages, and both indicators say so.
+  await expect(topPagination).toContainText("2 / 2 ページ");
+  await expect(
+    page.getByRole("navigation", { name: "ページ移動（下部）" })
+  ).toContainText("2 / 2 ページ");
+});
+
+test("the bottom pagination reaches page 2 too", async ({ page }) => {
+  await page.goto("/?q=fixture-alpha");
+
+  await page
+    .getByRole("navigation", { name: "ページ移動（下部）" })
+    .getByRole("link", { name: "次へ" })
+    .click();
+
+  await expect(page).toHaveURL(/\?q=fixture-alpha&page=2/);
   await expect(page.getByText("全 25 件中 21〜25 件")).toBeVisible();
 });

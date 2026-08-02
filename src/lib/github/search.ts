@@ -19,6 +19,7 @@
 
 import { githubFetch } from "./client";
 import type { Result } from "./errors";
+import { DEFAULT_SORT, type SearchSort } from "@/lib/searchUrl";
 import type {
   GitHubRepoSummaryPayload,
   GitHubSearchPayload,
@@ -106,7 +107,8 @@ function toRepoSummary(payload: GitHubRepoSummaryPayload): RepoSummary {
  */
 export async function searchRepositories(
   query: string,
-  page = 1
+  page = 1,
+  sort: SearchSort = DEFAULT_SORT
 ): Promise<Result<SearchResult>> {
   // Guard first, before anything else. API-04 is not an optimisation: the point
   // is that GitHub never receives the request, so its 422 never happens and the
@@ -133,6 +135,16 @@ export async function searchRepositories(
     page: String(requestedPage),
   });
 
+  // GitHub has no `sort=best-match` value — relevance is what you get when the
+  // parameter is absent, so the default branch must omit it rather than send
+  // a literal. `order` only means something alongside `sort`, so it is set in
+  // the same place or not at all. The value cannot be arbitrary: `SearchSort`
+  // is a closed union and `parseSort` is the only way a URL becomes one.
+  if (sort === "stars") {
+    params.set("sort", "stars");
+    params.set("order", "desc");
+  }
+
   const result = await githubFetch<GitHubSearchPayload>({
     path: `/search/repositories?${params.toString()}`,
     endpoint: "search/repositories",
@@ -155,11 +167,28 @@ export async function searchRepositories(
   const reachableCount = Math.min(payload.total_count, SEARCH_MAX_RESULTS);
   const lastIndexOnPage = requestedPage * SEARCH_PER_PAGE;
 
+  // Derived here, beside the clamp it depends on, rather than in the view.
+  // `totalPages` counts the pages a user can actually *reach*, not the pages
+  // `total_count` implies: a keyword matching 48,283 repositories has 50
+  // reachable pages, not 2,415, because GitHub refuses result 1001. Showing
+  // the arithmetic answer would put a page number in the UI that returns an
+  // error when you navigate to it.
+  //
+  // The floor of 1 covers the zero-match case: "1 / 0 ページ" is not a thing.
+  // Zero matches renders the empty state anyway, but the type should not
+  // depend on the caller knowing that.
+  const totalPages = Math.max(
+    1,
+    Math.ceil(reachableCount / SEARCH_PER_PAGE)
+  );
+
   return {
     ok: true,
     data: {
       items: payload.items.map(toRepoSummary),
       totalCount: payload.total_count,
+      reachableCount,
+      totalPages,
       page: requestedPage,
       perPage: SEARCH_PER_PAGE,
       hasNextPage: lastIndexOnPage < reachableCount,

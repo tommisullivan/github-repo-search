@@ -238,6 +238,99 @@ describe("searchRepositories — URL construction (SEC-03, T-01-12)", () => {
   });
 });
 
+describe("searchRepositories — sort", () => {
+  it("omits sort and order entirely on the default ordering", async () => {
+    const fetchMock = stubFetch(jsonResponse(searchPayload(0)));
+
+    await searchRepositories("react");
+
+    // GitHub has no `sort=best-match` value — relevance is the absence of the
+    // parameter. Sending a literal would be a 422 waiting to happen.
+    const url = requestedUrl(fetchMock);
+    expect(url.searchParams.has("sort")).toBe(false);
+    expect(url.searchParams.has("order")).toBe(false);
+  });
+
+  it("sends sort=stars with order=desc when sorting by stars", async () => {
+    const fetchMock = stubFetch(jsonResponse(searchPayload(0)));
+
+    await searchRepositories("react", 1, "stars");
+
+    const url = requestedUrl(fetchMock);
+    expect(url.searchParams.get("sort")).toBe("stars");
+    // `order` is meaningless without `sort`, and ascending stars would show
+    // the least-starred repositories first — the opposite of the request.
+    expect(url.searchParams.get("order")).toBe("desc");
+  });
+
+  it("keeps the keyword a single q value when sorting", async () => {
+    const fetchMock = stubFetch(jsonResponse(searchPayload(0)));
+
+    await searchRepositories("next&sort=forks", 1, "stars");
+
+    const url = requestedUrl(fetchMock);
+    expect(url.searchParams.getAll("q")).toEqual(["next&sort=forks"]);
+    expect(url.searchParams.getAll("sort")).toEqual(["stars"]);
+  });
+
+  it("still refuses a blank keyword when a sort is requested", async () => {
+    const fetchMock = stubFetch(jsonResponse(searchPayload(0)));
+
+    const result = await searchRepositories("   ", 1, "stars");
+
+    expect(result).toEqual({ ok: false, error: { code: "INVALID_QUERY" } });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("searchRepositories — totalPages", () => {
+  it("counts the pages implied by the match count when everything is reachable", async () => {
+    stubFetch(jsonResponse(searchPayload(42)));
+
+    const result = await searchRepositories("react");
+
+    // 42 matches at 20 per page — three pages, the last one partial.
+    expect(result.ok && result.data.totalPages).toBe(3);
+    expect(result.ok && result.data.reachableCount).toBe(42);
+  });
+
+  it("caps at the ceiling rather than the arithmetic answer for a broad keyword", async () => {
+    stubFetch(jsonResponse(searchPayload(48_283)));
+
+    const result = await searchRepositories("react");
+
+    // 48,283 / 20 is 2,415 pages, but GitHub refuses result 1001, so only 50
+    // are reachable. Reporting 2,415 would put page numbers in the UI that
+    // return an error when navigated to.
+    expect(result.ok && result.data.totalPages).toBe(
+      SEARCH_MAX_RESULTS / SEARCH_PER_PAGE
+    );
+    expect(result.ok && result.data.totalPages).toBe(50);
+    // The raw count is still reported unchanged (D-14).
+    expect(result.ok && result.data.totalCount).toBe(48_283);
+    expect(result.ok && result.data.reachableCount).toBe(SEARCH_MAX_RESULTS);
+  });
+
+  it("never reports zero pages", async () => {
+    stubFetch(jsonResponse(searchPayload(0, [])));
+
+    const result = await searchRepositories("qwertyuiopasdfgh");
+
+    // "1 / 0 ページ" is not a thing. Zero matches renders the empty state,
+    // but the value must be coherent regardless of what the caller does.
+    expect(result.ok && result.data.totalPages).toBe(1);
+  });
+
+  it("reports a single page when the matches fit exactly on one", async () => {
+    stubFetch(jsonResponse(searchPayload(20)));
+
+    const result = await searchRepositories("react");
+
+    // The off-by-one that a naive `ceil(n/20) + 1` would produce.
+    expect(result.ok && result.data.totalPages).toBe(1);
+  });
+});
+
 describe("searchRepositories — empty results are a success, not a failure", () => {
   it("returns ok with zero items when nothing matched", async () => {
     stubFetch(jsonResponse(searchPayload(0, [])));
