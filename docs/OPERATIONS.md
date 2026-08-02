@@ -2,7 +2,7 @@
 
 How this app would be observed and how it behaves when GitHub misbehaves. Reasoning and policy — the code lands in the phases named against each item.
 
-> **Status:** nothing here is implemented yet. `src/lib/github/` does not exist. This document fixes the policy before the code is written, because "we'll add logging later" is how apps reach production unobservable.
+> **Status:** the logging, timeout, retry and caching policy below is **implemented** in `src/lib/github/` as of Phase 1. This document fixed the policy *before* the code was written — because "we'll add logging later" is how apps reach production unobservable — and has since been reconciled against what actually shipped. Where a measurement contradicted the policy's premise, the measurement is recorded rather than smoothed over.
 
 ## Governing constraint: free, local, and optional
 
@@ -13,10 +13,14 @@ Two rules bound every choice below.
 
 | Concern | Default (zero infrastructure) | Optional local upgrade | Licence |
 |---|---|---|---|
-| Logging | Structured JSON to stdout via `pino` | `pino` → Loki, viewed in Grafana | MIT / AGPL |
+| Logging | **`console.log` with `JSON.stringify`** — one structured JSON line per event, no dependency (D-17, D-18) | A log shipper (Promtail, Vector, or the platform's own) tails stdout → Loki, viewed in Grafana. **No application change** | — / AGPL |
 | Error tracking | Errors logged with a correlation id at the App Router boundaries | Self-hosted GlitchTip (Sentry-SDK compatible) | AGPL |
 | Tracing | Off | OpenTelemetry via `@vercel/otel` → local Jaeger | Apache 2.0 |
 | Metrics | Derived from logs | Prometheus + Grafana | Apache 2.0 / AGPL |
+
+**Why `console.log` and not a logging library.** `AGENTS.md` requires preferring the platform over a library, and this is the case where that rule pays. A read-only app with one upstream needs no levels beyond a derived string, no transports, and no redaction machinery — the log entry type is closed, so there is no field a token or a header bag *could* be written into, which is a stronger guarantee than a redaction rule anyone can forget to configure. Next already writes stdout. A logging dependency would buy nothing and cost a supply-chain surface, a version to keep current, and an `npm audit` line item.
+
+**The upgrade path does not require adopting one either**, which is the part worth stating plainly: stdout JSON is already shippable. Moving to Loki is an infrastructure change — point a shipper at the process's stdout — not a code change. So the "optional upgrade" column costs zero refactoring, which is a better property than the alternative it replaced.
 
 The optional column exists to show the path is real, not to be run day to day. If added, it belongs in a `docker-compose.observability.yml` that is **not** referenced by `npm run dev`.
 
@@ -35,7 +39,7 @@ Every GitHub response carries the answer in its headers:
 | `x-ratelimit-reset` | Unix seconds until the window resets |
 | `retry-after` | Present on some 403/429 responses; authoritative when it is |
 
-Policy: `githubFetch()` reads these on every response and includes them in its log line (Phase 1). Remaining headroom is therefore visible in normal operation, not just at the moment of failure — the difference between "we were rate limited at 14:03" and "we were one request from the limit for six minutes beforehand."
+Policy, and as of Phase 1 the implementation: `githubFetch()` reads these on every response and includes them in its log line. Remaining headroom is therefore visible in normal operation, not just at the moment of failure — the difference between "we were rate limited at 14:03" and "we were one request from the limit for six minutes beforehand."
 
 If a threshold alert were ever wired up, this is the one worth having. Nothing else in the app degrades gradually.
 
@@ -124,20 +128,22 @@ The base URL was pointed at the probe by a **temporary one-line edit** to the `G
 
 Structured JSON, one object per event, written to stdout. Server-side only — Server Components already run on the server, so there is no client logging path to build.
 
-**Every outbound GitHub call (Phase 1):**
+**Every outbound GitHub call — as shipped in Phase 1 (`src/lib/github/log.ts`):**
 
-| Field | Example |
-|---|---|
-| `requestId` | Correlation id, generated per inbound request |
-| `route` | `/` or `/repos/[owner]/[repo]` |
-| `endpoint` | `search/repositories` or `repos/{owner}/{repo}` |
-| `status` | `200`, `403`, `404`, `422` |
-| `durationMs` | `142` |
-| `rateLimitRemaining` / `rateLimitReset` | From the headers above |
-| `cacheHit` | Whether Next's fetch cache served it |
-| `errorType` | `RateLimitError` etc., on failure only |
+| Field | Example | Note |
+|---|---|---|
+| `requestId` | `56476d64-…` | Generated **per GitHub call** with `crypto.randomUUID()`. Becomes per *inbound* request in Phase 2, when there are routes to correlate across. A retry shares the id of the call that produced it, so both attempts correlate |
+| `route` | — | **Deferred to Phase 2.** Phase 1 has no routes, so the field is omitted rather than filled with an invented value |
+| `endpoint` | `search/repositories` or `repos/{owner}/{repo}` | A literal union — a typo fails the build |
+| `status` | `200`, `403`, `404`, `422`, or `null` | `null` when the request never completed |
+| `durationMs` | `142` — and legitimately `0` on a cache hit | Reported as measured, never floored to a positive number |
+| `rateLimitRemaining` / `rateLimitReset` | `59` / `2000000000`, or `null` | From the headers above; `null` when absent or unparseable. **Historical on a cache hit**, per [§ Measured](#measured-what-the-fetch-cache-does-to-this-signal) Q4 |
+| `cacheHit` | Always `null` | Deliberate, and the reason is counted rather than asserted: [§ Measured](#measured-what-the-fetch-cache-does-to-this-signal) found no in-process signal that discriminates a hit from a miss, and [§ Confirmed against the shipped client](#confirmed-against-the-shipped-client) observed `durationMs` falling 26 → 1 → 0 across cached renders — exactly the signal that must not be turned into a guess |
+| `errorType` | `"GitHubRequestError"`, or the timeout classification `toRequestError` produces | On failure only. The vocabulary is the four codes (`RATE_LIMIT`, `NOT_FOUND`, `INVALID_QUERY`, `NETWORK`) and the one thrown class — there are no per-status error classes |
 
-**Levels:** `error` for unexpected failures and network faults; `warn` for rate limiting and 4xx that indicate a real problem; `info` for completed requests; `debug` for cache decisions.
+**Levels:** `error` for unexpected failures, a null status, and 5xx; `warn` for 403/429/404; `info` for completed requests. The level is **derived inside `logGitHubCall`**, never passed in, so two call sites cannot disagree about what a 403 means. There is no `debug` level and no cache-decision line: [§ Measured](#measured-what-the-fetch-cache-does-to-this-signal) established that a cache decision is not observable to application code, so a "cache decisions" log line could only have been invented.
+
+One ordering consequence worth knowing when reading stdout: a malformed-JSON 200 logs at `level: "info"` **before** it throws. The order is deliberate — read headers, log, then branch — so the line is guaranteed even when a later step fails. An `info` line can therefore be immediately followed by a boundary error.
 
 ### What is deliberately not logged
 
@@ -149,16 +155,17 @@ Search keywords *are* logged, since they are public search terms with no user at
 
 ## Resilience policy
 
-Currently unspecified in code, which is itself the problem: a bare `fetch()` has **no timeout** and will wait indefinitely if GitHub stalls. In a Server Component that holds the render open and the user sees nothing.
+The problem this policy exists for: a bare `fetch()` has **no timeout** and will wait indefinitely if GitHub stalls. In a Server Component that holds the render open and the user sees nothing.
 
-Policy for Phase 1:
+Shipped in Phase 1 (`src/lib/github/client.ts`), and every row is proven by asserting `fetch` call counts rather than by reading the code:
 
 | Concern | Decision | Reason |
 |---|---|---|
-| **Timeout** | ~5s per GitHub request via `AbortSignal.timeout()` | A slow response is a failed response from the user's point of view. Better a fast, honest error state than an indefinite hang |
+| **Timeout** | 5s per GitHub request via `AbortSignal.timeout(5000)` | A slow response is a failed response from the user's point of view. Better a fast, honest error state than an indefinite hang. A timeout is **never** retried, so the worst case is one deadline |
 | **Retry on rate limit (403/429)** | **Never** | Retrying consumes the quota that is already exhausted and makes recovery slower. Respect `x-ratelimit-reset` and tell the user when to try again |
 | **Retry on 4xx** | Never | 404 and 422 are deterministic. Repeating them cannot change the answer |
-| **Retry on transient network faults** | At most one, short backoff | Covers a dropped connection without amplifying an outage |
+| **Retry on 5xx** | Never | No HTTP response is retried at all. A 5xx throws `GitHubRequestError` on the first attempt |
+| **Retry on transient network faults** | At most one, after 250ms | Covers a dropped connection without amplifying an outage. A `TypeError` from `fetch` is the only thing that retries |
 | **Cancellation** | Propagate the request's abort signal | If the user navigates away, the in-flight GitHub call should not outlive the render |
 | **Circuit breaking** | Not implemented | Meaningful for high-volume services with a failing dependency. Here, GitHub's own rate-limit headers already tell us when to stop, and traffic is one request per user action |
 

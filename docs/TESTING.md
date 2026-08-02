@@ -10,9 +10,10 @@ The app is a **stateless read-through client for the GitHub REST API** ([`docs/A
 Two things are true at once, and conflating them would be dishonest:
 
 - **The harness exists and passes.** Vitest, React Testing Library, Playwright, axe, and the coverage gate are configured and green locally.
-- **The feature-level tests do not exist yet**, because the features do not. `src/app/page.test.tsx` and `e2e/smoke.spec.ts` are deliberate placeholders whose only job is to prove the pipeline runs end to end.
+- **The unit layer is real as of Phase 1.** `src/lib/github/` ships with 106 colocated unit tests covering every branch of the failure mapping.
+- **The component and E2E layers are still placeholders**, because the features are. `src/app/page.test.tsx` and `e2e/smoke.spec.ts` exist to prove the pipeline runs end to end, nothing more.
 
-The tests described under [Test layers](#test-layers) land with their features, per the phase mapping in [`.planning/ROADMAP.md`](../.planning/ROADMAP.md): client tests in Phase 1 (TEST-01), component tests in Phase 3 (TEST-02), E2E search → detail in Phase 4 (TEST-03), and the raised coverage threshold in Phase 4 (TEST-04).
+The remaining tests described under [Test layers](#test-layers) land with their features, per the phase mapping in [`.planning/ROADMAP.md`](../.planning/ROADMAP.md): client tests in Phase 1 (TEST-01, **done**), component tests in Phase 3 (TEST-02), E2E search → detail in Phase 4 (TEST-03), and the raised coverage threshold in Phase 4 (TEST-04).
 
 ## The one non-negotiable rule
 
@@ -112,7 +113,13 @@ Unit (Vitest, jsdom)             the GitHub client and its error mapping
 
 ### Unit — the GitHub client (TEST-01, Phase 1)
 
-**Owns:** `src/lib/github/` — the fetch wrapper, query guarding, response typing, and above all the status-to-typed-error mapping described in [ARCHITECTURE.md](./ARCHITECTURE.md#typed-errors-distinct-ui). Every branch of that mapping gets a test: `RateLimitError`, `NotFoundError`, `ValidationError`, `NetworkError`, plus the whitespace-only query that must be rejected *before* a request is made.
+**Owns:** `src/lib/github/` — the fetch wrapper, query guarding, response typing, and above all the status-to-failure mapping described in [ARCHITECTURE.md](./ARCHITECTURE.md#typed-errors-distinct-ui). Every branch of that mapping gets a test:
+
+- the three **returned** codes — `RATE_LIMIT` (with `resetAt`), `NOT_FOUND`, `INVALID_QUERY` — asserted on the returned `Result`, never on a rejection;
+- the one **thrown** type — `GitHubRequestError`, carrying `NETWORK`, for a transport fault, the 5s timeout, **any** 5xx, and malformed JSON — asserted with `rejects.toBeInstanceOf`;
+- plus the whitespace-only query that must be rejected *before* a request is made, which is asserted by `fetch` never being called, not merely by the returned code.
+
+**The dual contract has to be tested as a dual contract.** `searchRepositories()` and `getRepository()` both return a `Result` **and** may throw. A caller — or a test — that handles only `ok: false` is incomplete and will drop a whole failure class silently, because the rejection surfaces as an unhandled promise rather than as a failed assertion. Each unit therefore carries at least one `rejects` test alongside its returned-code tests.
 
 This is where the error matrix is nailed down, once, because every other layer renders that result rather than re-deriving it.
 
@@ -144,23 +151,43 @@ In Vitest, stub the global:
 
 ```ts
 import { afterEach, expect, it, vi } from "vitest";
+import { GitHubRequestError } from "@/lib/github/errors";
+import { searchRepositories } from "@/lib/github/search";
 
 afterEach(() => vi.unstubAllGlobals());
 
-it("maps 403 with a rate-limit header to RateLimitError", async () => {
+it("returns RATE_LIMIT when GitHub reports an exhausted quota", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue(
       new Response("{}", {
         status: 403,
-        headers: { "x-ratelimit-remaining": "0" },
+        headers: {
+          "x-ratelimit-remaining": "0",
+          "x-ratelimit-reset": "2000000000",
+        },
       })
     )
   );
 
-  await expect(searchRepositories("next")).rejects.toBeInstanceOf(RateLimitError);
+  const result = await searchRepositories("next");
+
+  // Asserted on the returned value, because that is how this failure travels.
+  expect(result).toEqual({
+    ok: false,
+    error: { code: "RATE_LIMIT", resetAt: 2000000000 },
+  });
+});
+
+// The other half of the dual contract: a transport fault is the case that rejects.
+it("throws GitHubRequestError when the transport fails", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+  await expect(searchRepositories("next")).rejects.toBeInstanceOf(GitHubRequestError);
 });
 ```
+
+Note what the second test also proves incidentally: the client retries a transport fault exactly once, so `fetch` is called twice here. Retry policy is asserted by **call count**, never by reading the code — `expect(fetchMock).toHaveBeenCalledTimes(2)` for a transport fault, and `1` for every HTTP response including 5xx, which is never retried.
 
 In Playwright, intercept before navigating:
 
@@ -186,10 +213,10 @@ Every feature ships with the happy path **and** at least one failure path. That 
 
 | Failure mode | Trigger | Must be proven |
 | --- | --- | --- |
-| **Rate limit** | 403 or 429 (rate-limit headers present) | Surfaces as `RateLimitError` and renders a rate-limit message — **never** as "no results" |
-| **Not found** | 404 on `repos/{owner}/{repo}` | Surfaces as `NotFoundError` and renders the not-found page, not an error boundary |
-| **Validation** | 422 (empty/malformed `q`) | Guarded before the request where possible; otherwise `ValidationError` with guidance to refine the query |
-| **Network error** | `fetch` rejects | Surfaces as `NetworkError` and renders a generic retry state |
+| **Rate limit** | 403 or 429 (rate-limit headers present) | **Returned** as `{ ok: false, error: { code: "RATE_LIMIT", resetAt } }` and rendered as a rate-limit message with a retry time — **never** as "no results" |
+| **Not found** | 404 on `repos/{owner}/{repo}` | **Returned** as `{ ok: false, error: { code: "NOT_FOUND" } }`; the page branches on the code and calls `notFound()`, so the user gets the not-found page, not an error boundary |
+| **Validation** | 422, a blank/whitespace `q`, or a page past the 1000-result ceiling | Guarded before the request where possible — assert `fetch` was never called, not merely the code — otherwise **returned** as `{ ok: false, error: { code: "INVALID_QUERY" } }` with guidance to refine the query |
+| **Network error** | `fetch` rejects, the 5s timeout fires, any 5xx, or malformed JSON | **Thrown** as `GitHubRequestError` (code `NETWORK`), asserted with `rejects.toBeInstanceOf`, and rendered by `error.tsx` as a generic retry state |
 | **Empty results** | 200 with `total_count: 0` | Renders an empty state that says what to do next — distinct from every error above |
 
 Two assertions that are easy to skip and should not be:
@@ -236,13 +263,24 @@ Configured in [`vitest.config.mts`](../vitest.config.mts) with the v8 provider, 
 
 **Enforcement:** thresholds fail `npm run test:coverage` — the command the CI `quality` job runs. Plain `npm test` does not check coverage, so run the coverage variant before pushing anything that adds source files.
 
-**These numbers are provisional.** With only a placeholder page in `src/`, 70% is trivially met and proves nothing. The config carries the note explicitly:
+**These numbers are still provisional, but they are no longer meaningless.** Phase 1 added the first real source files, so 70% now meets real code rather than a placeholder page. Measured at the end of Phase 1:
+
+| File | Lines | Branches | Functions |
+| --- | --- | --- | --- |
+| `src/lib/github/client.ts` | 55/55 | 20/20 | 8/8 |
+| `src/lib/github/errors.ts` | 34/34 | 27/27 | 7/7 |
+| `src/lib/github/log.ts` | 11/11 | 9/9 | 3/3 |
+| `src/lib/github/search.ts` | 21/21 | 11/11 | 3/3 |
+| `src/lib/github/repo.ts` | 11/11 | 6/6 | 1/1 |
+| **Total** | **133/133 (100%)** | **73/73 (100%)** | **23/23 (100%)** |
+
+The branch column is the one that matters here: every arm of the failure mapping is executed, which is the property TEST-01 is actually about. The thresholds stay at 70 regardless — raising them is Phase 4 work under TEST-04, and the config carries the note explicitly:
 
 ```ts
 // Raised as real code lands — see .planning/ROADMAP.md Phase 4 (TEST-04).
 ```
 
-The mechanism is in place from Phase 0; setting a threshold that means something — high on `src/lib/github/`, where the error branches live — is Phase 4 work under TEST-04.
+**One honest caveat about reading the output.** The `text` reporter currently prints an **empty per-file table** — header, rule, nothing between — while the `Coverage summary` block beneath it is correct and the thresholds gate correctly. It is not `skipFull`; that was ruled out by re-running with `--coverage.skipFull=false`. The per-file figures above come from `coverage/lcov.info`, which is complete. Tracked in `.planning/phases/01-github-api-client/deferred-items.md` for Phase 4, which has to revisit this configuration anyway — an empty table matters far more once a threshold can actually fail, because that is the run where someone needs to see *which* file fell short.
 
 Coverage is a floor for spotting untested branches, not a goal. 100% coverage of code that never asserts a failure path is worth less than 70% that does.
 

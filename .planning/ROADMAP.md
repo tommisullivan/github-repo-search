@@ -44,7 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Requirements**: API-01, API-02, API-03, API-04, API-05, TEST-01, OBS-01, OBS-02, OBS-03, SEC-03
 **Success Criteria** (what must be TRUE):
   1. Search (`search/repositories`) and detail (`repos/{owner}/{repo}`) data are fetched through a single typed client with explicit response types — no `unknown` GitHub JSON reaches a caller
-  2. Rate limit, not found, validation, and network failures each surface as a distinct typed error a caller can branch on, never a raw throw
+  2. Rate limit, not found, and validation each surface as a distinct machine-readable code in a **returned** `Result` the caller branches on (`RATE_LIMIT` with `resetAt`, `NOT_FOUND`, `INVALID_QUERY`), while network faults and unrecognised statuses surface as a **thrown** `GitHubRequestError` carrying `NETWORK` that reaches `error.tsx` — because production error sanitisation makes `error.tsx` branching unreliable, so the states that need distinct UI must not depend on it
   3. An empty or whitespace-only query is rejected before any request is made, so GitHub's 422 never occurs
   4. A `GITHUB_TOKEN` present in the server environment raises the rate limit, nothing about it reaches the client bundle, and `.env.example` documents it
   5. Repeated identical reads are served from Next's fetch cache, reducing rate-limit pressure
