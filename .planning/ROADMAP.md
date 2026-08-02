@@ -52,7 +52,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   7. Every GitHub call emits one structured JSON log line carrying status, duration, and the `x-ratelimit-remaining` / `x-ratelimit-reset` headers, so quota headroom is visible before it runs out — and the token, the `Authorization` header, and response bodies never appear in it
   8. Every GitHub request carries a timeout so a stalled upstream cannot hang a render indefinitely; a rate-limited or 4xx response is never retried, and only a transient network fault retries, at most once
   9. URLs are built with `URLSearchParams` and `encodeURIComponent`, so no user-supplied value can alter which endpoint is addressed
-**Plans**: TBD
+**Plans**: 5 — 01-01 (types, error vocabulary, logger) · 01-02 (fetch-cache measurement + human checkpoint) · 01-03 (githubFetch) · 01-04 (search/repo units) · 01-05 (doc reconciliation, lint enforcement, terminal gate)
 
 ### Phase 2: Search Experience
 **Goal**: A user can search GitHub by keyword and get a trustworthy result list in every state, including failure
