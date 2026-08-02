@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation & CI** - Architecture, operations, security and testing documentation, plus the full CI quality gate (delivered during initialization)
 - [x] **Phase 1: GitHub API Client** - One typed, server-side client with named errors, structured logging, and a timeout/retry policy (completed 2026-08-02)
-- [ ] **Phase 2: Search Experience** - Japanese-language keyword search with URL-as-state and every result state handled
+- [x] **Phase 2: Search Experience** - Japanese-language keyword search with URL-as-state and every result state handled (completed 2026-08-02)
 - [ ] **Phase 3: Repository Detail Page** - A dedicated route showing all required repository fields, with an allowlisted avatar host
 - [ ] **Phase 4: Quality Gate & Submission Readiness** - Accessibility, responsiveness, E2E coverage, and the reviewer-facing docs
 
@@ -70,7 +70,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Loading, empty results, network failure, and rate limiting each render a distinct, human-readable state — a rate limit is never shown as "no results", and no raw error or stack trace ever reaches the user
   6. Every user-facing string is Japanese — labels, placeholders, buttons, empty and error states, page titles, and `aria-label` values — while all code, comments, and commits remain English
   7. Component tests cover the search form and result list on the happy path, and on the empty-result and rate-limited states — the two a user is most likely to hit
-**Plans**: TBD
+**Plans**: 3 — 02-01 (Japanese app boundaries: layout, loading.tsx, error.tsx) · 02-02 (search page with every reachable state — happy, empty, rate-limit, two-cause invalid-query, throw) · 02-03 (debounced client input and server-rendered pagination) — **all complete**
+**Status**: Complete — all 10 Phase 2 requirements closed (SRCH-01..05, UX-01..04, I18N-01); 32 new component tests, 145 total, 98.5% statements / 95.53% branches / 100% functions coverage; all seven gate commands run and read in one session; zero new dependencies (verified: `git diff --stat package.json package-lock.json` empty across every commit in the phase). Two caveats recorded honestly, in the same form Phase 1's status used:
+  - **`test:e2e` and `test:a11y` are green against the phase's route, not against every state of it.** The E2E smoke test asserts an h1 on `/` (the page renders `GitHubリポジトリ検索`), and axe found no violations on the blank-query render. Neither drives the search flow through result → detail navigation, nor checks a11y on the rate-limit, empty, or invalid-query renders. Real per-state coverage is TEST-03 and UX-06 in Phase 4 — this is defined and locally verified, not yet exhaustively E2E-tested.
+  - **Coverage thresholds were not raised.** They stay at 70% per file; actual is 98.5% statements. Raising them is TEST-04 in Phase 4, when every route is in place and the per-file `text` reporter is fixed (STATE.md carry-forward).
+  As with Phases 0 and 1, the CI workflow itself has still never executed — no GitHub remote is configured. Every script it invokes passes locally.
 **UI hint**: yes
 
 ### Phase 3: Repository Detail Page
@@ -113,7 +117,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 0. Foundation & CI | - | Complete | 2026-08-01 |
 | 1. GitHub API Client | 5/5 | Complete   | 2026-08-02 |
-| 2. Search Experience | 0/TBD | Not started | - |
+| 2. Search Experience | 3/3 | Complete   | 2026-08-02 |
 | 3. Repository Detail Page | 0/TBD | Not started | - |
 | 4. Quality Gate & Submission Readiness | 0/TBD | Not started | - |
 
