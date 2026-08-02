@@ -80,7 +80,10 @@ export function RepoDetail({ repo, backHref }: Props) {
       </header>
 
       {repo.description !== null ? (
-        <p className="text-base leading-7 text-zinc-700 dark:text-zinc-300">
+        // break-words: real descriptions carry long unbroken tokens (URLs),
+        // which otherwise overflow a 375px viewport — measured at 639px
+        // scrollWidth against the E2E fixture before this class (UX-07).
+        <p className="break-words text-base leading-7 text-zinc-700 dark:text-zinc-300">
           {repo.description}
         </p>
       ) : null}

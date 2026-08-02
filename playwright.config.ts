@@ -28,11 +28,15 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     // CI builds once in its own job and shares `.next` as an artifact, so the test jobs
-    // serve it directly. Locally there is no artifact, so build first.
+    // serve it directly. Locally there is no artifact, so build first — and clear the
+    // persistent fetch cache before starting: Next's data cache survives restarts and
+    // serves stale fixture JSON (stale-while-revalidate), which masked a fixture edit
+    // during the 04-02 responsive work. CI needs no clearing — its routes are dynamic,
+    // so the fresh build artifact carries no fetch-cache entries.
     command:
       process.env.PLAYWRIGHT_PREBUILT === "1"
         ? `npx next start --port ${PORT}`
-        : `npm run build && npx next start --port ${PORT}`,
+        : `npm run build && rm -rf .next/cache/fetch-cache && npx next start --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

@@ -51,7 +51,14 @@ const REPO_ALPHA: GitHubRepoSummaryPayload = {
   name: "repo-alpha",
   full_name: "e2e-fixture/repo-alpha",
   html_url: "https://github.com/e2e-fixture/repo-alpha",
-  description: "E2Eテスト用のフィクスチャリポジトリです。",
+  // The trailing URL is one long unbroken token, deliberately: real GitHub
+  // descriptions carry URLs, and an unbroken token wider than a 375px
+  // viewport is the realistic horizontal-overflow risk UX-07's responsive
+  // spec must exercise (04-02 additive extension to the 04-01 fixture set).
+  description:
+    "E2Eテスト用のフィクスチャリポジトリです。参照: " +
+    "https://e2e-fixture.example.invalid/very-long-unbroken-reference-path-" +
+    "0123456789012345678901234567890123456789012345678901234567890123456789",
   language: "TypeScript",
   stargazers_count: 12345,
   forks_count: 234,
