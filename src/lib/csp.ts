@@ -41,10 +41,19 @@ export function buildCsp(nonce: string, isDev: boolean): string {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${
       isDev ? " 'unsafe-eval'" : ""
     }`,
-    // D4-06 ladder rung 1: the strict nonce form. Stepped only on measured
-    // violation evidence (e2e/security-headers.spec.ts), and any step is
-    // reflected back into the unit tests — never into script-src.
-    `style-src 'self' 'nonce-${nonce}'`,
+    // D4-06 ladder rung 2, forced by measurement (e2e/security-headers.spec.ts
+    // against the production build, 2026-08-02): rung 1's strict nonce form
+    // `'self' 'nonce-…'` blocked the `style="color:transparent"` attribute
+    // that `next/image` renders on the avatar in RepoDetail — reported as
+    //   "securitypolicyviolation: directive=style-src-attr blocked=inline"
+    // on /repos/e2e-fixture/repo-alpha. A style *attribute* cannot carry a
+    // nonce, so the scoped fix is 'unsafe-hashes' plus the sha256 of that
+    // exact declaration (verified: `echo -n "color:transparent" | openssl
+    // dgst -sha256 -binary | base64`). This allows precisely one known
+    // declaration — not arbitrary inline styles ('unsafe-inline' remains
+    // rejected, rung 3 was not needed) — and never touches script-src
+    // (T-04-10). The nonce stays for the <style> elements Next injects.
+    `style-src 'self' 'nonce-${nonce}' 'unsafe-hashes' 'sha256-zlqnbDt84zf1iSefLU/ImC54isoprH/MRiVZGskwexk='`,
     // 'self' covers the `/_next/image` optimizer output; the avatar host
     // covers direct avatar loads; data: covers inline placeholder images.
     "img-src 'self' data: https://avatars.githubusercontent.com",

@@ -41,10 +41,20 @@ describe("buildCsp — production", () => {
     expect(directive(policy, "script-src")).not.toContain("unsafe-inline");
   });
 
-  it("style-src is the strict nonce form (D4-06 ladder rung 1)", () => {
-    // Pinned exactly: if measurement forces a ladder step, this test is
-    // updated alongside the builder with the violation that forced it.
-    expect(directive(policy, "style-src")).toBe("style-src 'self' 'nonce-abc'");
+  it("style-src is the nonce + scoped-hash form (D4-06 ladder rung 2)", () => {
+    // Pinned exactly. Rung 1 (`'self' 'nonce-…'`) was measured against the
+    // production build and blocked next/image's `style="color:transparent"`
+    // attribute on the detail view ("directive=style-src-attr
+    // blocked=inline"); attributes cannot carry a nonce, so the measured
+    // step is 'unsafe-hashes' + the sha256 of that one declaration. Rung 3
+    // ('unsafe-inline') was not needed and stays rejected.
+    expect(directive(policy, "style-src")).toBe(
+      "style-src 'self' 'nonce-abc' 'unsafe-hashes' 'sha256-zlqnbDt84zf1iSefLU/ImC54isoprH/MRiVZGskwexk='"
+    );
+  });
+
+  it("style-src never contains 'unsafe-inline' either — the ladder stopped at rung 2", () => {
+    expect(directive(policy, "style-src")).not.toContain("unsafe-inline");
   });
 
   it("locks down the baseline directives", () => {
