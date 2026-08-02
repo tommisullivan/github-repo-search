@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed .planning/phases/01-github-api-client/01-04-PLAN.md
-last_updated: "2026-08-02T03:12:07.737Z"
+stopped_at: Completed .planning/phases/01-github-api-client/01-05-PLAN.md — Phase 1 closed
+last_updated: "2026-08-02T03:36:44.782Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
-  percent: 80
+  completed_plans: 5
+  percent: 20
 ---
 
 # Project State
@@ -21,31 +21,31 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** A reviewer can search for a repository, open its detail page, and find the code behind it clear, correct, and production-minded — including when the GitHub API fails or rate-limits.
-**Current focus:** Phase 1 — GitHub API Client
+**Current focus:** Phase 2 — Search Experience (Phase 1 complete)
 
 ## Current Position
 
-Phase: 1 of 4 (GitHub API Client) — Phase 0 complete
-Plan: 4 of 5 in current phase
-Status: Ready to execute 01-05 (docs sweep and phase gate)
-Last activity: 2026-08-02 — Plan 01-04 complete: `searchRepositories()` and `getRepository()` shipped, the two functions Phases 2 and 3 call. Blank keywords and pages past the 1000-result ceiling are refused before any request; watchers come from `subscribers_count`; both units return a `Result` **and may throw**. 52 new tests, 106 total, 100% coverage
+Phase: 1 of 4 (GitHub API Client) — **complete**; Phase 0 complete
+Plan: 5 of 5 in current phase — all plans complete
+Status: Phase 1 closed and approved at the human checkpoint. Ready to plan Phase 2.
+Last activity: 2026-08-02 — Plan 01-05 complete: design docs and ROADMAP criterion 2 reconciled with the shipped hybrid failure model; the boundary and `dangerouslySetInnerHTML` rules moved from review convention to enforced lint rules proven to fire by `src/eslint-rules.test.ts`; all seven gate commands run and read (113 tests, 100% coverage, 0 vulnerabilities); Process 6 in both AI usage logs. All 10 Phase 1 requirements Complete.
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100% (Phase 1 plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~19 min
-- Total execution time: 75 min
+- Total execution time: 94 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 0. Foundation & CI | — | — | — |
-| 1. GitHub API Client | 4 | 75 min | ~19 min |
+| 1. GitHub API Client | 5 | 94 min | ~19 min |
 
 **Per plan:**
 
@@ -55,11 +55,12 @@ Progress: [████████░░] 80%
 | Phase 1 P02 | 18 min | 2 tasks | 1 file |
 | Phase 1 P03 | 25 min | 2 tasks | 3 files |
 | Phase 1 P04 | 20 min | 2 tasks | 4 files |
+| Phase 1 P05 | 19 min | 3 tasks | 9 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (12 min), 01-02 (18 min), 01-03 (25 min), 01-04 (20 min)
-- Trend: steady — 01-04 was two disjoint units against a settled client signature, so no exploration was needed
+- Last 5 plans: 01-01 (12 min), 01-02 (18 min), 01-03 (25 min), 01-04 (20 min), 01-05 (19 min)
+- Trend: steady — Phase 1 delivered in 94 minutes across 5 plans. 01-05 was documentation, lint enforcement and the phase gate, so most of its time went to running and reading the seven gate commands rather than to writing code
 
 *Updated after each plan completion*
 
@@ -96,10 +97,12 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- **For 01-05:** `docs/ARCHITECTURE.md` still labels the client `githubFetch(path, init)` in two diagrams. The shipped signature is `githubFetch<T>({ path, endpoint, revalidate })`.
-- **For 01-05:** two `<verification>` greps inherited from 01-03 (`api.github.com` and `GITHUB_TOKEN` "in `client.ts` only") also match test files that assert the very thing being checked. Scope them to non-test files, or use `grep -rn "process.env" src/`, which matches `client.ts` alone.
-- **For 01-05:** 01-04 hit the same class again — the cross-unit-import grep matches each test file importing its own subject, and the `watchers_count` grep matches the explanatory comment the plan itself required. Three plans in a row: make "scope boundary greps to non-test, non-comment lines" a convention.
-- **For 01-05:** the README still needs the `subscribers_count` note the brief asks for (AGENTS.md § GitHub API rules). The reasoning is at `src/lib/github/repo.ts` and on `GitHubRepoDetailPayload`.
+- ~~**For 01-05:** `docs/ARCHITECTURE.md` labels the client `githubFetch(path, init)` in two diagrams.~~ **Done in `bbfa68c`** — both diagrams now show `githubFetch({ path, endpoint, revalidate })`, with the reason stated: an `init` parameter would let a caller pass its own `cache` and silently undo API-05.
+- ~~**For 01-05:** verification greps that also match test files.~~ **Done** — all Phase 1 sweeps were scoped to non-test, non-comment lines and reported as such. Three checks could not be expressed as literally written; see 01-05-SUMMARY.md.
+- **Convention, now four plans running:** a boundary grep is written against **non-test, non-comment lines**, or it is written as a test. 01-05's own automated chain forbade a string that its own required deliverable had to contain (`dangerouslySetInnerHTML` in `src/eslint-rules.test.ts`). Where a check cannot express the real property, report it — do not weaken code to satisfy it.
+- **For Phase 4 (DOC-01):** the README still needs the `subscribers_count` note the brief asks for (AGENTS.md § GitHub API rules). The reasoning is at `src/lib/github/repo.ts` and on `GitHubRepoDetailPayload`. Not added in 01-05 — `README.md` was not in that plan's `files_modified`. It is a brief requirement, not a nice-to-have.
+- **For Phase 4 (TEST-04):** the `text` coverage reporter prints an **empty per-file table** while the summary and threshold gate are correct (`skipFull` ruled out). Per-file figures currently have to be read from `coverage/lcov.info`. See `.planning/phases/01-github-api-client/deferred-items.md`. Fix it before raising the thresholds — that is the run where someone needs to see which file fell short.
+- **For Phase 2:** `docs/OPERATIONS.md` marks `route` as deferred and `requestId` as per-GitHub-call. Both become fillable once routes exist. They are named gaps, not oversights.
 - **For Phase 2:** `searchRepositories` returns `INVALID_QUERY` for **both** a blank keyword and a page past the 1000-result ceiling. The planned copy "refine your keyword" is wrong for the second. Only reachable by hand-editing the URL (`hasNextPage` is clamped), but decide deliberately — `SEARCH_PER_PAGE` and `SEARCH_MAX_RESULTS` are exported so the route can clamp.
 - **For Phases 2 and 3:** both units return a `Result` **and may throw** `GitHubRequestError`. Handling only `ok: false` is incomplete; the throw is D-03's path to `error.tsx`.
 
@@ -122,7 +125,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T03:11:46.759Z
+Last session: 2026-08-02T03:36:33.061Z
 Stopped at: Completed .planning/phases/01-github-api-client/01-04-PLAN.md
 Resume file: None
 

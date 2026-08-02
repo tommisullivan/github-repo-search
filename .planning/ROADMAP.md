@@ -15,7 +15,7 @@ The ordering is deliberate: error handling is the hardest requirement in this br
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 0: Foundation & CI** - Architecture, operations, security and testing documentation, plus the full CI quality gate (delivered during initialization)
-- [ ] **Phase 1: GitHub API Client** - One typed, server-side client with named errors, structured logging, and a timeout/retry policy
+- [x] **Phase 1: GitHub API Client** - One typed, server-side client with named errors, structured logging, and a timeout/retry policy (completed 2026-08-02)
 - [ ] **Phase 2: Search Experience** - Japanese-language keyword search with URL-as-state and every result state handled
 - [ ] **Phase 3: Repository Detail Page** - A dedicated route showing all required repository fields, with an allowlisted avatar host
 - [ ] **Phase 4: Quality Gate & Submission Readiness** - Accessibility, responsiveness, E2E coverage, and the reviewer-facing docs
@@ -52,7 +52,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   7. Every GitHub call emits one structured JSON log line carrying status, duration, and the `x-ratelimit-remaining` / `x-ratelimit-reset` headers, so quota headroom is visible before it runs out — and the token, the `Authorization` header, and response bodies never appear in it
   8. Every GitHub request carries a timeout so a stalled upstream cannot hang a render indefinitely; a rate-limited or 4xx response is never retried, and only a transient network fault retries, at most once
   9. URLs are built with `URLSearchParams` and `encodeURIComponent`, so no user-supplied value can alter which endpoint is addressed
-**Plans**: 5 — 01-01 (types, error vocabulary, logger) · 01-02 (fetch-cache measurement + human checkpoint) · 01-03 (githubFetch) · 01-04 (search/repo units) · 01-05 (doc reconciliation, lint enforcement, terminal gate)
+**Plans**: 5 — 01-01 (types, error vocabulary, logger) · 01-02 (fetch-cache measurement + human checkpoint) · 01-03 (githubFetch) · 01-04 (search/repo units) · 01-05 (doc reconciliation, lint enforcement, terminal gate) — **all complete**
+**Status**: Complete — all 10 requirements closed (API-01..05, TEST-01, OBS-01..03, SEC-03); 113 tests, 100% of lines/branches/functions in `src/lib/github/`; all seven gate commands run and read in one session; zero new dependencies across the phase. Two caveats recorded honestly, in the same form Phase 0 used:
+  - **Criterion 4 is partly observed.** That the token header is sent, absent when unset, and never written to stdout is tested. That a token *raises the real rate limit* is GitHub's documented behaviour and was **not measured** — measuring it would have spent the quota it describes.
+  - **`test:e2e` and `test:a11y` are green against a scaffold.** Each ran one test, against the create-next-app page Phase 1 does not touch. Real E2E coverage is TEST-03 in Phase 4.
+  As with Phase 0, the CI workflow itself has still never executed — no GitHub remote is configured. Every script it invokes passes locally. *Defined and locally verified*, not *observed green in CI*.
 
 ### Phase 2: Search Experience
 **Goal**: A user can search GitHub by keyword and get a trustworthy result list in every state, including failure
@@ -108,7 +112,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation & CI | - | Complete | 2026-08-01 |
-| 1. GitHub API Client | 4/5 | In progress | - |
+| 1. GitHub API Client | 5/5 | Complete   | 2026-08-02 |
 | 2. Search Experience | 0/TBD | Not started | - |
 | 3. Repository Detail Page | 0/TBD | Not started | - |
 | 4. Quality Gate & Submission Readiness | 0/TBD | Not started | - |
