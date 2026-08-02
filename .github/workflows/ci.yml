@@ -95,8 +95,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # PLAYWRIGHT_PREBUILT skips the build in playwright.config.ts and serves the
-      # artifact directly. The GitHub API is intercepted inside the specs — CI runners
-      # share IPs and are aggressively rate-limited, so a live API would make this flaky.
+      # artifact directly. The GitHub API is mocked inside the Next server: the
+      # Playwright webServer sets E2E_GITHUB_MOCK=1, and src/instrumentation.ts wraps
+      # the server's outbound fetch with fixtures (the calls are server-side, so
+      # in-spec page.route interception can never see them). CI runners share IPs and
+      # are aggressively rate-limited, so a live API would make this flaky; unmatched
+      # api.github.com requests get a sentinel 500, never a pass-through.
       - name: Run Playwright
         run: npm run test:e2e
         env:

@@ -1,6 +1,25 @@
 import type { NextConfig } from "next";
+import { staticSecurityHeaders } from "./src/lib/csp";
 
 const nextConfig: NextConfig = {
+  // SEC-01: the per-deployment-constant security headers. Values and reasons
+  // live in `src/lib/csp.ts` (single source of truth — imported, not
+  // mirrored). Two deliberate absences (D4-07):
+  // - No Content-Security-Policy here: it carries a per-request nonce, which
+  //   a static header cannot, so it is set by `src/proxy.ts`. The docs'
+  //   no-nonce headers() path would require `script-src 'unsafe-inline'` —
+  //   exactly what SEC-01 forbids.
+  // - Strict-Transport-Security is meaningful only once served over HTTPS
+  //   from a real domain; browsers ignore it on plain-HTTP responses, so it
+  //   ships inert locally and binds on deployment.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [...staticSecurityHeaders],
+      },
+    ];
+  },
   // SEC-02: `next/image` will fetch and re-serve any URL passed to its `src`
   // prop, which effectively turns the Next image optimiser into an image proxy
   // for whatever host is allowed here. `remotePatterns` is the framework's

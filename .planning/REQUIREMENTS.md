@@ -36,8 +36,8 @@
 - [x] **UX-03**: Network and API failures render a usable error state — never a raw error or stack trace
 - [x] **UX-04**: Rate limiting (403/429) is identified specifically, not shown as "no results"
 - [x] **UX-05**: Unknown owner/repo renders a not-found page
-- [ ] **UX-06**: Keyboard operable with labelled controls and correct heading structure
-- [ ] **UX-07**: Layout works on mobile and desktop widths
+- [x] **UX-06**: Keyboard operable with labelled controls and correct heading structure
+- [x] **UX-07**: Layout works on mobile and desktop widths
 
 ### Observability & Resilience
 
@@ -47,7 +47,7 @@
 
 ### Security
 
-- [ ] **SEC-01**: Security response headers configured, including a Content-Security-Policy that does not rely on `unsafe-inline`
+- [x] **SEC-01**: Security response headers configured, including a Content-Security-Policy that does not rely on `unsafe-inline`
 - [x] **SEC-02**: `images.remotePatterns` allowlists GitHub's avatar host specifically, never a wildcard
 - [x] **SEC-03**: URLs are built with `URLSearchParams` / `encodeURIComponent`; `dangerouslySetInnerHTML` appears nowhere
 
@@ -59,8 +59,8 @@
 
 - [x] **TEST-01**: Unit tests for the GitHub client including every error-mapping branch
 - [x] **TEST-02**: Component tests for search and detail covering happy path plus at least one failure path each (detail half complete in Phase 3; the search half is Phase 2's, running in parallel)
-- [ ] **TEST-03**: E2E test covering search → detail navigation, with the GitHub API mocked
-- [ ] **TEST-04**: Coverage threshold enforced in CI
+- [x] **TEST-03**: E2E test covering search → detail navigation, with the GitHub API mocked
+- [x] **TEST-04**: Coverage threshold enforced in CI
 
 ### CI
 
@@ -72,10 +72,10 @@
 
 ### Documentation
 
-- [ ] **DOC-01**: README covers setup, the optional token, and the reasoning behind key decisions
-- [ ] **DOC-02**: AI usage logged per process in Japanese and English
-- [ ] **DOC-07**: README is bilingual with Japanese first — the reviewers and the brief are Japanese, and the README is the first document read
-- [ ] **DOC-08**: README contains a self-contained AI usage summary — how AI was used, what the human decided, how it was verified — not only links to the per-process logs. The brief asks for the report to be summarised *in* the README (「利用方法のレポートをREADMEにまとめてください」)
+- [x] **DOC-01**: README covers setup, the optional token, and the reasoning behind key decisions
+- [x] **DOC-02**: AI usage logged per process in Japanese and English
+- [x] **DOC-07**: README is bilingual with Japanese first — the reviewers and the brief are Japanese, and the README is the first document read
+- [x] **DOC-08**: README contains a self-contained AI usage summary — how AI was used, what the human decided, how it was verified — not only links to the per-process logs. The brief asks for the report to be summarised *in* the README (「利用方法のレポートをREADMEにまとめてください」)
 - [x] **DOC-03**: `docs/ARCHITECTURE.md` explains structure, data flow, and rejected alternatives
 - [x] **DOC-04**: `docs/OPERATIONS.md` records the observability and resilience policy
 - [x] **DOC-05**: `docs/SECURITY.md` records the threat model and security decisions
@@ -126,7 +126,7 @@ Deferred. Tracked but not in the current roadmap.
 | SEC-03 | Phase 1 | Complete |
 | I18N-01 | Phase 2 | Complete |
 | SEC-02 | Phase 3 | Complete |
-| SEC-01 | Phase 4 | Pending |
+| SEC-01 | Phase 4 | Complete |
 | API-01 | Phase 1 | Complete |
 | API-02 | Phase 1 | Complete |
 | API-03 | Phase 1 | Complete |
@@ -149,14 +149,14 @@ Deferred. Tracked but not in the current roadmap.
 | DTL-05 | Phase 3 | Complete |
 | UX-05 | Phase 3 | Complete |
 | TEST-02 | Phase 3 | Complete |
-| UX-06 | Phase 4 | Pending |
-| UX-07 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
-| TEST-04 | Phase 4 | Pending |
-| DOC-01 | Phase 4 | Pending |
-| DOC-02 | Phase 4 | Pending |
-| DOC-07 | Phase 4 | Pending |
-| DOC-08 | Phase 4 | Pending |
+| UX-06 | Phase 4 | Complete |
+| UX-07 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
+| TEST-04 | Phase 4 | Complete |
+| DOC-01 | Phase 4 | Complete |
+| DOC-02 | Phase 4 | Complete |
+| DOC-07 | Phase 4 | Complete |
+| DOC-08 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 46 total
@@ -175,4 +175,4 @@ Deferred. Tracked but not in the current roadmap.
 
 ---
 *Requirements defined: 2026-08-01*
-*Last updated: 2026-08-02 after Phase 3 close (DTL-01..05, UX-05, TEST-02, SEC-02 marked Complete)*
+*Last updated: 2026-08-02 after Phase 4 close (UX-06, UX-07, TEST-03, TEST-04, SEC-01, DOC-01, DOC-02, DOC-07, DOC-08 marked Complete — all 46 v1 requirements Complete)*

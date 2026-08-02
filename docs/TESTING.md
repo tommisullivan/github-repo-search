@@ -11,9 +11,10 @@ Two things are true at once, and conflating them would be dishonest:
 
 - **The harness exists and passes.** Vitest, React Testing Library, Playwright, axe, and the coverage gate are configured and green locally.
 - **The unit layer is real as of Phase 1.** `src/lib/github/` ships with 106 colocated unit tests covering every branch of the failure mapping.
-- **The component and E2E layers are still placeholders**, because the features are. `src/app/page.test.tsx` and `e2e/smoke.spec.ts` exist to prove the pipeline runs end to end, nothing more.
+- **The component layer is real as of Phases 2–3.** The search and detail views ship with colocated component tests covering their states, including the failure paths.
+- **The E2E journey is real as of Phase 4.** [`e2e/search-detail.spec.ts`](../e2e/search-detail.spec.ts) drives search → results → detail → back against a production build, with the GitHub API mocked server-side (see [Mocking strategy](#mocking-strategy)).
 
-The remaining tests described under [Test layers](#test-layers) land with their features, per the phase mapping in [`.planning/ROADMAP.md`](../.planning/ROADMAP.md): client tests in Phase 1 (TEST-01, **done**), component tests in Phase 3 (TEST-02), E2E search → detail in Phase 4 (TEST-03), and the raised coverage threshold in Phase 4 (TEST-04).
+Per the phase mapping in [`.planning/ROADMAP.md`](../.planning/ROADMAP.md): client tests in Phase 1 (TEST-01, **done**), component tests in Phases 2–3 (TEST-02, **done**), E2E search → detail in Phase 4 (TEST-03, **done**), and the raised coverage threshold in Phase 4 (TEST-04, **done** — see [Coverage](#coverage)).
 
 ## The one non-negotiable rule
 
@@ -21,7 +22,7 @@ The remaining tests described under [Test layers](#test-layers) land with their 
 
 Unauthenticated GitHub search allows roughly **10 requests per minute** (core REST is 60/hour). CI runners share outbound IPs with every other project on the platform and are rate-limited aggressively, so a single live call turns the suite into a coin flip. A flaky pipeline is worse than no pipeline — it trains everyone to re-run red builds instead of reading them.
 
-So: unit and component tests mock at the `fetch` boundary; Playwright specs intercept `https://api.github.com/**` before the page can reach it.
+So: unit and component tests mock at the `fetch` boundary; Playwright runs start the Next server with its outbound `fetch` wrapped by a fixture-serving interceptor (see [Mocking strategy](#mocking-strategy)), and an unmatched `api.github.com` request gets a sentinel 500 — never a pass-through to the live API.
 
 ## Toolchain
 
@@ -135,7 +136,9 @@ This is where the error matrix is nailed down, once, because every other layer r
 
 **Owns:** one thing that no lower layer can prove — a real browser against a real production build, entering a keyword, seeing results, clicking through to the detail route, and coming back with the search intact. Plus the fact that a detail URL opened cold renders correctly.
 
-**Does not own:** the error matrix. Reproducing all five failure modes through the browser would be slow and duplicative; the interception layer covers the one or two that change navigation (notably not-found). E2E runs chromium only — cross-browser matrices are not in the brief and would cost CI time for no reviewed benefit.
+[`e2e/search-detail.spec.ts`](../e2e/search-detail.spec.ts) ships this as five tests against the server-side mock: the journey with `q` and `page` asserted intact in the URL after 「戻る」, the cold detail load with its `/` back-link fallback, a rate limit rendering as a rate-limit state and never as empty results, the not-found page for an unknown repository, and pagination onto the fixture set's shorter page 2. Every assertion pins a sentinel value only the fixtures can produce — notably watchers = 678, which only the `subscribers_count` mapping can supply, proving the watchers trap end to end.
+
+**Does not own:** the rest of the error matrix. Reproducing all five failure modes through the browser would be slow and duplicative; the specs cover the ones that change navigation or are dangerously confusable (not-found, rate-limit-vs-empty). E2E runs chromium only — cross-browser matrices are not in the brief and would cost CI time for no reviewed benefit.
 
 ## Mocking strategy
 
@@ -189,13 +192,24 @@ it("throws GitHubRequestError when the transport fails", async () => {
 
 Note what the second test also proves incidentally: the client retries a transport fault exactly once, so `fetch` is called twice here. Retry policy is asserted by **call count**, never by reading the code — `expect(fetchMock).toHaveBeenCalledTimes(2)` for a transport fault, and `1` for every HTTP response including 5xx, which is never retried.
 
-In Playwright, intercept before navigating:
+In Playwright, the interception happens **inside the Next server**, not in the browser:
 
-```ts
-await page.route("https://api.github.com/**", (route) =>
-  route.fulfill({ status: 200, json: searchFixture })
-);
 ```
+browser ──▶ Next server ──▶ github client ──▶ globalThis.fetch  ←── mocked here
+                                                  (E2E only, E2E_GITHUB_MOCK=1)
+```
+
+`page.route()` **cannot work here**, and understanding why is understanding the app's architecture: every GitHub call is made server-side, in Server Components. The browser only ever talks to the Next server — `api.github.com` never appears in its network stack, so a browser-side route handler would register, match nothing, and let every request through to the live API while the suite stayed green.
+
+Instead, the Playwright `webServer` ([`playwright.config.ts`](../playwright.config.ts)) starts `next start` with `E2E_GITHUB_MOCK=1`. Next's documented instrumentation hook ([`src/instrumentation.ts`](../src/instrumentation.ts)) sees the flag at server boot and installs [`src/lib/e2e/githubApiMock.ts`](../src/lib/e2e/githubApiMock.ts), which wraps the server's `globalThis.fetch`: requests to `api.github.com` are answered from the raw REST fixtures in [`src/lib/e2e/fixtures.ts`](../src/lib/e2e/fixtures.ts), an **unmatched** `api.github.com` request gets a sentinel 500 (`E2E_MOCK_UNMATCHED`) rather than a pass-through, and every other host is delegated unchanged. The real client — status mapping, header parsing, `subscribers_count` mapping — stays in the run, which is the same reason the Vitest half mocks `fetch` and not the module.
+
+The fixtures use sentinel values that cannot exist on real GitHub (owner `e2e-fixture`, watchers 678 against 12,345 stars), so a silently-broken interceptor fails named assertions instead of passing against live data. Outside E2E the mock is inert by construction: `register()` is a no-op unless both `NEXT_RUNTIME === "nodejs"` and `E2E_GITHUB_MOCK === "1"` hold, and only the Playwright `webServer` sets the flag — `npm run dev`, `npm run build`, and production `next start` are unaffected.
+
+Alternatives considered and rejected for the E2E layer:
+
+- **`page.route("https://api.github.com/**")`** — browser-side only; the server-side calls never reach the browser's network stack, so it would silently intercept nothing.
+- **An env-settable GitHub base URL pointing at a local mock server** — sealed by T-01-26: a configurable base URL redirects the `Authorization` header, the app's single secret, to any host an environment variable can name. See [`docs/OPERATIONS.md`](./OPERATIONS.md) § "Confirmed against the shipped client".
+- **MSW** — a new dev dependency for exactly two endpoint shapes; the ~100-line wrapper on the platform covers the need with zero dependencies.
 
 ### Why the boundary and not the module
 
@@ -205,7 +219,7 @@ Mocking at `fetch` keeps the real client, the real status handling, and the real
 
 A module mock is acceptable in a *component* test where the client is genuinely not the subject — but the client's own tests never mock it.
 
-No mock-service library (MSW or similar) is installed. `fetch` stubbing and `page.route` cover the current need; adding a dependency here is a decision to be made deliberately, not by habit ([`AGENTS.md`](../AGENTS.md) — "Adding dependencies is a decision, not a detail").
+No mock-service library (MSW or similar) is installed. `fetch` stubbing in Vitest and the server-side interceptor in E2E cover the need; adding a dependency here is a decision to be made deliberately, not by habit ([`AGENTS.md`](../AGENTS.md) — "Adding dependencies is a decision, not a detail").
 
 ## Failure paths are mandatory
 
@@ -250,39 +264,32 @@ Automated axe catches roughly the machine-checkable subset of WCAG. It does not 
 
 ## Coverage
 
-Configured in [`vitest.config.mts`](../vitest.config.mts) with the v8 provider, reporting `text` and `lcov`.
+Configured in [`vitest.config.mts`](../vitest.config.mts) with the v8 provider, reporting `text` (per-file table in the terminal) and `lcov` (the audit trail under `coverage/lcov.info`).
 
-| Metric | Threshold |
-| --- | --- |
-| Lines | 70% |
-| Functions | 70% |
-| Branches | 70% |
-| Statements | 70% |
+**Thresholds (TEST-04, closed).** Set on 2026-08-02 from the measured post-Phase-4 run, once every Phase-4 test had landed:
 
-**Scope:** `src/**/*.{ts,tsx}`, excluding `src/**/*.test.{ts,tsx}`, `src/app/layout.tsx` (a static shell with no logic), and `**/*.d.ts`.
+| Metric | Threshold | Measured actual |
+| --- | --- | --- |
+| Statements | 92% | 96.38% (240/249) |
+| Branches | 90% | 94.11% (128/136) |
+| Functions | 85% | 92.59% (50/54) |
+| Lines | 92% | 96.34% (237/246) |
+
+**How the numbers were chosen.** The Phase 4 target zone was 90 lines / 90 statements / 85 branches / 80 functions. Measured, every zone value sat more than 6 points below actual — a floor that loose gates nothing — so each was tightened to roughly 4 points below the measured figure. The floor must sit *meaningfully* below actual: a threshold you trip over on the next honest refactor is a lint-disable waiting to happen, and weakening a gate to pass it is forbidden outright ([`AGENTS.md`](../AGENTS.md)).
+
+**Why functions sits lower.** The functions denominator is small (54), and Next's route-convention files — `loading.tsx`, `error.tsx`, `not-found.tsx` — only execute inside Next's runtime, so they report 0% functions under Vitest. Adding one honest new route segment with those three files legitimately moves the functions metric by 5–8 points without any code being less tested. The 85% floor absorbs that; the other metrics have larger denominators and no such structural dip.
+
+**These values are never lowered.** Raising them as coverage genuinely improves is fine; lowering one to make a run pass is a regression by definition (Phase 4 scope fence). The config comment in `vitest.config.mts` carries the same rule next to the numbers.
+
+**The gate is proven, not presumed.** Before the floor was committed, one deliberate red run set `lines: 97` — above the measured 96.34% — and the run failed with `ERROR: Coverage for lines (96.34%) does not meet global threshold (97%)` and exit code 1. A gate never seen red is a gate taken on faith; this one has been seen red.
+
+**Scope:** `src/**/*.{ts,tsx}`, excluding tests (`src/**/*.{test,spec}.{ts,tsx}`), `src/app/layout.tsx` (a static shell with no logic), `**/*.d.ts`, and the E2E-only mock (`src/instrumentation.ts`, `src/lib/e2e/**` — exercised by Playwright against the running server, not by Vitest; see [Mocking strategy](#mocking-strategy)).
 
 **Enforcement:** thresholds fail `npm run test:coverage` — the command the CI `quality` job runs. Plain `npm test` does not check coverage, so run the coverage variant before pushing anything that adds source files.
 
-**These numbers are still provisional, but they are no longer meaningless.** Phase 1 added the first real source files, so 70% now meets real code rather than a placeholder page. Measured at the end of Phase 1:
+**The per-file table prints again.** Phase 1 recorded an honest caveat here: the `text` reporter printed an empty per-file table — header, rule, nothing between — while the summary and thresholds worked. The root cause turned out to be environmental, not configuration: when Vitest 4 detects an AI-agent session (std-env's `isAgent`, triggered by the `CLAUDECODE` environment variable that Claude Code sets), it silently injects `skipFull: true` into the `text` reporter's per-reporter options, and istanbul's text reporter then drops every 100%-covered row. In Phase 1 *all* files were at 100%, so the table was completely empty. The earlier rule-out via `--coverage.skipFull=false` was ineffective because per-reporter options take precedence over the top-level flag inside the coverage provider. The fix is an explicit per-reporter option — `["text", { skipFull: false }]` — which overrides the injected default; the table now lists every file regardless of who runs it.
 
-| File | Lines | Branches | Functions |
-| --- | --- | --- | --- |
-| `src/lib/github/client.ts` | 55/55 | 20/20 | 8/8 |
-| `src/lib/github/errors.ts` | 34/34 | 27/27 | 7/7 |
-| `src/lib/github/log.ts` | 11/11 | 9/9 | 3/3 |
-| `src/lib/github/search.ts` | 21/21 | 11/11 | 3/3 |
-| `src/lib/github/repo.ts` | 11/11 | 6/6 | 1/1 |
-| **Total** | **133/133 (100%)** | **73/73 (100%)** | **23/23 (100%)** |
-
-The branch column is the one that matters here: every arm of the failure mapping is executed, which is the property TEST-01 is actually about. The thresholds stay at 70 regardless — raising them is Phase 4 work under TEST-04, and the config carries the note explicitly:
-
-```ts
-// Raised as real code lands — see .planning/ROADMAP.md Phase 4 (TEST-04).
-```
-
-**One honest caveat about reading the output.** The `text` reporter currently prints an **empty per-file table** — header, rule, nothing between — while the `Coverage summary` block beneath it is correct and the thresholds gate correctly. It is not `skipFull`; that was ruled out by re-running with `--coverage.skipFull=false`. The per-file figures above come from `coverage/lcov.info`, which is complete. Tracked in `.planning/phases/01-github-api-client/deferred-items.md` for Phase 4, which has to revisit this configuration anyway — an empty table matters far more once a threshold can actually fail, because that is the run where someone needs to see *which* file fell short.
-
-Coverage is a floor for spotting untested branches, not a goal. 100% coverage of code that never asserts a failure path is worth less than 70% that does.
+Coverage is a floor for spotting untested branches, not a goal. 100% coverage of code that never asserts a failure path is worth less than 92% that does.
 
 ## CI gate
 
