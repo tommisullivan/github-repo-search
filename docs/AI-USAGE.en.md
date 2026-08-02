@@ -143,4 +143,16 @@ The brief is short, and the strongest temptation in a task like this is to add t
 
 ---
 
+## Processes 6 onwards — the implementation work
+
+Processes 1 to 5 above cover the setup: the spec, the project rules, the architecture and planning artifacts, the operations and security documentation, and the Node.js upgrade.
+
+Everything after that was development — the GitHub API client, the search experience, the repository detail page, the quality gate, and the pre-submission review and UX passes.
+
+Those processes were logged to the same standard as the entries above, and those entries remain in this repository's git history. They were removed from this file for length: at over 400 lines per language, the log had grown longer than the documentation it exists to support, and a record nobody finishes reading is not doing its job.
+
+The reasoning behind the implementation decisions was not lost with them. It lives where it is most useful to a reader: in comments beside the code it explains, and in [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md), [`docs/TESTING.md`](./TESTING.md), [`docs/OPERATIONS.md`](./OPERATIONS.md) and [`docs/SECURITY.md`](./SECURITY.md).
+
+---
+
 <!-- Append the next process here -->
