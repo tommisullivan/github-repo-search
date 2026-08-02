@@ -27,8 +27,31 @@ test("search → detail → back is fully operable with the keyboard alone", asy
   await expect(resultLink).toBeVisible();
   await expect(input).toBeFocused();
 
-  // Stop 2: exactly one Tab from the input reaches the first result link —
-  // no intermediate stops between the input and the results.
+  // Stops 2-5: every control between the input and the results, named. The
+  // sequence is longer than it was — the 検索 button, the sort control and the
+  // top pagination all sit here now — so the assertion enumerates each stop
+  // rather than counting Tabs. A stray or dead stop fails with a name.
+  //
+  // Note the cost this makes visible: a keyboard user now passes four controls
+  // to reach the first result. That is the trade for not having to scroll to
+  // the bottom to page, and it is deliberate — the top pagination's disabled
+  // 前へ stays focusable by design (D-19), so it is a stop even on page 1.
+  const topPagination = page.getByRole("navigation", {
+    name: "ページ移動（上部）",
+  });
+
+  for (const expected of [
+    page.getByRole("button", { name: "検索" }),
+    page.getByRole("combobox", { name: "並び替え" }),
+    topPagination.getByRole("link", { name: "前へ" }),
+    topPagination.getByRole("link", { name: "次へ" }),
+  ]) {
+    await page.keyboard.press("Tab");
+    await expect(expected).toBeFocused();
+  }
+
+  // Stop 6: the next Tab reaches the first result link — nothing else in
+  // between.
   await page.keyboard.press("Tab");
   await expect(resultLink).toBeFocused();
 
@@ -39,7 +62,7 @@ test("search → detail → back is fully operable with the keyboard alone", asy
     page.getByRole("heading", { level: 1, name: "repo-alpha" })
   ).toBeVisible();
 
-  // Stop 3: on the detail page the first Tab reaches the 戻る link — the
+  // Stop 4: on the detail page the first Tab reaches the 戻る link — the
   // back affordance is the first interactive control in reading order.
   await page.keyboard.press("Tab");
   const backLink = page.getByRole("link", { name: "戻る" });
@@ -50,4 +73,39 @@ test("search → detail → back is fully operable with the keyboard alone", asy
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\?q=fixture-alpha&page=1/);
   await expect(resultLink).toBeVisible();
+});
+
+// Enter comes from implicit form submission, which jsdom does not implement —
+// so a unit test cannot prove it. This is the only place the behaviour the
+// user actually asked for is verified, in a real browser.
+test("Enter in the search box submits without waiting for the debounce", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const input = page.getByRole("searchbox", { name: "リポジトリを検索" });
+  // fill() sets the value in one shot, so the 300ms debounce timer starts and
+  // is still pending; pressing Enter immediately is what proves the submit
+  // path navigates on its own rather than the timer doing the work.
+  await input.fill("fixture-alpha");
+  await input.press("Enter");
+
+  await expect(page).toHaveURL(/\?q=fixture-alpha&page=1/);
+  await expect(
+    page.getByRole("link", { name: "e2e-fixture/repo-alpha" })
+  ).toBeVisible();
+});
+
+test("the 検索 button submits the current keyword", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByRole("searchbox", { name: "リポジトリを検索" }).fill(
+    "fixture-alpha"
+  );
+  await page.getByRole("button", { name: "検索" }).click();
+
+  await expect(page).toHaveURL(/\?q=fixture-alpha&page=1/);
+  await expect(
+    page.getByRole("link", { name: "e2e-fixture/repo-alpha" })
+  ).toBeVisible();
 });

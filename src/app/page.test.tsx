@@ -8,7 +8,8 @@ import type { RepoSummary, SearchResult } from "@/types/github";
 // or the real GitHub API (TESTING.md: mock at @/lib/github/*).
 const mockSearch = vi.fn();
 vi.mock("@/lib/github/search", () => ({
-  searchRepositories: (...args: [string, number?]) => mockSearch(...args),
+  searchRepositories: (...args: [string, number?, string?]) =>
+    mockSearch(...args),
   SEARCH_PER_PAGE: 20,
   SEARCH_MAX_RESULTS: 1000,
 }));
@@ -46,6 +47,11 @@ const okResult = (
   data: {
     items,
     totalCount: items.length,
+    // Defaults describe the ordinary case — everything that matched is
+    // reachable. A test that cares about the 1000-result ceiling overrides
+    // both explicitly rather than relying on arithmetic here.
+    reachableCount: items.length,
+    totalPages: 1,
     page: 1,
     perPage: 20,
     hasNextPage: false,
@@ -76,15 +82,85 @@ describe("Home (search page)", () => {
 
     await renderPage({ q: "react" });
 
-    expect(mockSearch).toHaveBeenCalledWith("react", 1);
+    expect(mockSearch).toHaveBeenCalledWith("react", 1, "best-match");
     const list = screen.getByRole("list", { name: "検索結果" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     // The results header shows the raw total.
     expect(screen.getByText(/42/)).toBeInTheDocument();
-    // Pagination is present alongside the result list (SRCH-04).
+    // Pagination is present alongside the result list (SRCH-04) — twice, so
+    // a user does not have to scroll past 20 results to reach the next page.
     expect(
-      screen.getByRole("navigation", { name: /ページ移動/ })
+      screen.getAllByRole("navigation", { name: /ページ移動/ })
+    ).toHaveLength(2);
+    expect(
+      screen.getByRole("navigation", { name: "ページ移動（上部）" })
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "ページ移動（下部）" })
+    ).toBeInTheDocument();
+  });
+
+  it("passes the sort from the URL through to the client and preserves it in the pagination links", async () => {
+    mockSearch.mockResolvedValue(
+      okResult([makeRepo()], {
+        totalCount: 42,
+        reachableCount: 42,
+        totalPages: 3,
+        hasNextPage: true,
+      })
+    );
+
+    await renderPage({ q: "react", sort: "stars" });
+
+    expect(mockSearch).toHaveBeenCalledWith("react", 1, "stars");
+    const next = within(
+      screen.getByRole("navigation", { name: "ページ移動（下部）" })
+    ).getByRole("link", { name: /次へ/ });
+    expect(next.getAttribute("href")).toContain("sort=stars");
+  });
+
+  it("falls back to the default ordering for an unrecognised sort parameter", async () => {
+    mockSearch.mockResolvedValue(okResult([makeRepo()], { totalCount: 1 }));
+
+    // Hand-edited address bar. Never forwarded to GitHub verbatim.
+    await renderPage({ q: "react", sort: "forks" });
+
+    expect(mockSearch).toHaveBeenCalledWith("react", 1, "best-match");
+  });
+
+  it("explains the 1000-result ceiling when more matched than can be reached", async () => {
+    mockSearch.mockResolvedValue(
+      okResult([makeRepo()], {
+        totalCount: 48_283,
+        reachableCount: 1000,
+        totalPages: 50,
+        hasNextPage: true,
+      })
+    );
+
+    await renderPage({ q: "react" });
+
+    // The raw total is still reported honestly...
+    expect(screen.getByText(/48,283/)).toBeInTheDocument();
+    // ...but so is the reason it does not divide into 2,415 pages.
+    expect(screen.getByText(/GitHubの仕様により/)).toHaveTextContent(/50/);
+    expect(
+      screen.getByRole("navigation", { name: "ページ移動（上部）" })
+    ).toHaveTextContent("1 / 50 ページ");
+  });
+
+  it("does not mention the ceiling when every match is reachable", async () => {
+    mockSearch.mockResolvedValue(
+      okResult([makeRepo()], {
+        totalCount: 42,
+        reachableCount: 42,
+        totalPages: 3,
+      })
+    );
+
+    await renderPage({ q: "react" });
+
+    expect(screen.queryByText(/GitHubの仕様により/)).toBeNull();
   });
 
   it("passes a non-default page through to the client and computes the correct range header", async () => {
@@ -98,7 +174,7 @@ describe("Home (search page)", () => {
 
     await renderPage({ q: "react", page: "3" });
 
-    expect(mockSearch).toHaveBeenCalledWith("react", 3);
+    expect(mockSearch).toHaveBeenCalledWith("react", 3, "best-match");
     // Page 3, per_page=20 -> starts at item 41.
     const rangeText = screen.getByText(/件中/);
     expect(rangeText.textContent).toMatch(/41/);

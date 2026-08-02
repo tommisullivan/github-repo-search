@@ -121,7 +121,24 @@ export interface RepoDetail extends RepoSummary {
  */
 export type SearchResult = {
   items: RepoSummary[];
+
+  /** GitHub's raw `total_count` — how many repositories matched. */
   totalCount: number;
+
+  /**
+   * `totalCount` clamped to the 1000-result ceiling: how many of those matches
+   * this API will actually serve. Equal to `totalCount` for ordinary searches;
+   * smaller for broad ones. The gap between the two is what the view needs in
+   * order to explain itself honestly.
+   */
+  reachableCount: number;
+
+  /**
+   * The last page a user can reach, derived from `reachableCount` — never from
+   * `totalCount`, which would name pages that return an error.
+   */
+  totalPages: number;
+
   page: number;
   perPage: number;
   hasNextPage: boolean;

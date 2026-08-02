@@ -58,7 +58,7 @@ describe("SearchInput", () => {
   });
 
   it("renders with the initial query and does not call router.replace on mount", () => {
-    render(<SearchInput initialQuery="react" debounceMs={300} />);
+    render(<SearchInput initialQuery="react" sort="best-match" debounceMs={300} />);
 
     const input = screen.getByRole("searchbox", { name: /リポジトリを検索/ });
     expect(input).toHaveValue("react");
@@ -69,7 +69,7 @@ describe("SearchInput", () => {
   });
 
   it("debounces a burst of keystrokes into a single router.replace call", () => {
-    render(<SearchInput initialQuery="" debounceMs={300} />);
+    render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
     const input = screen.getByRole("searchbox");
 
     change(input, "a");
@@ -86,7 +86,7 @@ describe("SearchInput", () => {
   });
 
   it("resets the timer across a slow burst so only the final value triggers replace", () => {
-    render(<SearchInput initialQuery="" debounceMs={300} />);
+    render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
     const input = screen.getByRole("searchbox");
 
     change(input, "a");
@@ -101,7 +101,7 @@ describe("SearchInput", () => {
   });
 
   it("goes to the canonical '/' URL when the input is cleared or whitespace-only", () => {
-    render(<SearchInput initialQuery="react" debounceMs={300} />);
+    render(<SearchInput initialQuery="react" sort="best-match" debounceMs={300} />);
     const input = screen.getByRole("searchbox");
 
     change(input, "   ");
@@ -111,7 +111,7 @@ describe("SearchInput", () => {
   });
 
   it("resets page to 1 whenever the keyword changes", () => {
-    render(<SearchInput initialQuery="react" debounceMs={300} />);
+    render(<SearchInput initialQuery="react" sort="best-match" debounceMs={300} />);
     const input = screen.getByRole("searchbox");
 
     change(input, "vue");
@@ -123,7 +123,7 @@ describe("SearchInput", () => {
   });
 
   it("encodes the keyword so an '&' or '=' cannot introduce a new query parameter", () => {
-    render(<SearchInput initialQuery="" debounceMs={300} />);
+    render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
     const input = screen.getByRole("searchbox");
 
     change(input, "next & react");
@@ -143,7 +143,7 @@ describe("SearchInput", () => {
   });
 
   it("never calls router.push — replace is the only navigation", () => {
-    render(<SearchInput initialQuery="" debounceMs={300} />);
+    render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
     const input = screen.getByRole("searchbox");
 
     change(input, "hello");
@@ -151,5 +151,185 @@ describe("SearchInput", () => {
 
     expect(push).not.toHaveBeenCalled();
     expect(replace).toHaveBeenCalled();
+  });
+
+  describe("submit", () => {
+    it("navigates on the 検索 button without waiting out the debounce", () => {
+      render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
+      const input = screen.getByRole("searchbox");
+
+      change(input, "react");
+      // Deliberately no advance(): the whole point of the button is that the
+      // user does not wait for a timer they cannot see.
+      expect(replace).not.toHaveBeenCalled();
+
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "検索" }));
+      });
+
+      expect(replace).toHaveBeenCalledTimes(1);
+      expect(replace).toHaveBeenLastCalledWith("/?q=react&page=1");
+    });
+
+    it("navigates on form submit — the path Enter takes via implicit submission", () => {
+      const { container } = render(
+        <SearchInput initialQuery="" sort="best-match" debounceMs={300} />
+      );
+      const input = screen.getByRole("searchbox");
+      const form = container.querySelector("form");
+      expect(form).not.toBeNull();
+
+      change(input, "vue");
+      act(() => {
+        fireEvent.submit(form as HTMLFormElement);
+      });
+
+      expect(replace).toHaveBeenCalledTimes(1);
+      expect(replace).toHaveBeenLastCalledWith("/?q=vue&page=1");
+      // A real submit would reload the page and lose the App Router; the
+      // handler must preventDefault. jsdom logs "Not implemented: submit"
+      // if it does not, so assert the intent directly.
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("still resolves to the same URL when the pending debounce fires after a submit", () => {
+      render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
+      const input = screen.getByRole("searchbox");
+
+      change(input, "react");
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "検索" }));
+      });
+      // The debounce timer was never cancelled, so it fires afterwards. That
+      // is acceptable precisely because it lands on the identical URL — this
+      // test is what stops the two paths silently diverging.
+      advance(300);
+
+      expect(replace).toHaveBeenCalledTimes(2);
+      for (const [target] of replace.mock.calls) {
+        expect(target).toBe("/?q=react&page=1");
+      }
+    });
+
+    it("encodes the keyword on submit, same as the debounced path", () => {
+      render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
+
+      change(screen.getByRole("searchbox"), "next & react");
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "検索" }));
+      });
+
+      const [[target]] = replace.mock.calls;
+      const parsed = new URL(target as string, "http://example.test");
+      expect(parsed.searchParams.get("q")).toBe("next & react");
+      expect(Array.from(parsed.searchParams.keys()).sort()).toEqual([
+        "page",
+        "q",
+      ]);
+    });
+
+    it("goes to the canonical '/' when submitted with a whitespace-only keyword", () => {
+      render(<SearchInput initialQuery="react" sort="best-match" debounceMs={300} />);
+
+      change(screen.getByRole("searchbox"), "   ");
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "検索" }));
+      });
+
+      expect(replace).toHaveBeenLastCalledWith("/");
+    });
+
+    it("exposes the control as a search landmark with a labelled input", () => {
+      render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
+
+      expect(screen.getByRole("search")).toBeInTheDocument();
+      // The visible 「キーワード」 label is wired by htmlFor/id now that a
+      // <form> sits where the wrapping <label> used to be.
+      expect(screen.getByText("キーワード")).toHaveAttribute(
+        "for",
+        screen.getByRole("searchbox").id
+      );
+      expect(screen.getByRole("searchbox").id).not.toBe("");
+    });
+  });
+
+  describe("sort control", () => {
+    const sortBox = () =>
+      screen.getByRole("combobox", { name: "並び替え" });
+
+    it("reflects the sort from the URL rather than local state", () => {
+      const { rerender } = render(
+        <SearchInput initialQuery="react" sort="stars" debounceMs={300} />
+      );
+      expect(sortBox()).toHaveValue("stars");
+
+      // Simulates Back to a differently-sorted URL: the server re-renders with
+      // a new prop and the control must follow it. A local useState would not.
+      rerender(
+        <SearchInput initialQuery="react" sort="best-match" debounceMs={300} />
+      );
+      expect(sortBox()).toHaveValue("best-match");
+    });
+
+    it("navigates immediately on change, without a second click on 検索", () => {
+      render(
+        <SearchInput initialQuery="react" sort="best-match" debounceMs={300} />
+      );
+
+      act(() => {
+        fireEvent.change(sortBox(), { target: { value: "stars" } });
+      });
+
+      expect(replace).toHaveBeenCalledTimes(1);
+      const parsed = new URL(
+        replace.mock.calls[0][0] as string,
+        "http://example.test"
+      );
+      expect(parsed.searchParams.get("sort")).toBe("stars");
+      expect(parsed.searchParams.get("q")).toBe("react");
+    });
+
+    it("resets to page 1 when the ordering changes", () => {
+      render(
+        <SearchInput initialQuery="react" sort="best-match" debounceMs={300} />
+      );
+
+      act(() => {
+        fireEvent.change(sortBox(), { target: { value: "stars" } });
+      });
+
+      // Page 7 of a relevance-ranked list is not page 7 of a star-ranked one.
+      expect(
+        new URL(
+          replace.mock.calls[0][0] as string,
+          "http://example.test"
+        ).searchParams.get("page")
+      ).toBe("1");
+    });
+
+    it("keeps the keyword the user can currently see, not the debounced one", () => {
+      render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
+
+      // Type without letting the debounce settle, then re-sort.
+      change(screen.getByRole("searchbox"), "vue");
+      act(() => {
+        fireEvent.change(sortBox(), { target: { value: "stars" } });
+      });
+
+      expect(
+        new URL(
+          replace.mock.calls[0][0] as string,
+          "http://example.test"
+        ).searchParams.get("q")
+      ).toBe("vue");
+    });
+
+    it("offers exactly the supported orderings, in Japanese", () => {
+      render(<SearchInput initialQuery="" sort="best-match" debounceMs={300} />);
+
+      expect(
+        Array.from(sortBox().querySelectorAll("option")).map((o) => o.textContent)
+      ).toEqual(["関連度順", "スター数順"]);
+    });
   });
 });
