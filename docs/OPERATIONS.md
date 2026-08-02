@@ -39,6 +39,69 @@ Policy: `githubFetch()` reads these on every response and includes them in its l
 
 If a threshold alert were ever wired up, this is the one worth having. Nothing else in the app degrades gradually.
 
+### Measured: what the fetch cache does to this signal
+
+**Measured 2026-08-02 against Next.js 16.2.12** (Turbopack, App Router, `cacheComponents` **not** enabled — so the "caching without Cache Components" model applies). Cache behaviour changed between Next 14 and 15 and will change again; re-run this before trusting it on a different version.
+
+Everything below is counted, not reasoned. A local Node HTTP server on `127.0.0.1:4599` served six independent paths, each with its own request counter and its own `x-ratelimit-*` headers. GitHub was never contacted — a twelve-request measurement against a ~10/minute unauthenticated quota would have measured GitHub's throttling instead of Next's cache. A temporary dynamic route awaited `searchParams` and fetched one path per cell; the build's route table confirmed it as `ƒ (Dynamic)`, so what follows is the persistent data cache and not build-time prerendering.
+
+#### Commands
+
+```bash
+nvm use                                  # Node 24.18.1
+node probe-server.mjs &                  # counting server on 127.0.0.1:4599
+rm -rf .next/cache && npm run build      # confirm route table shows `ƒ /cache-probe`
+# restart the probe server here so every counter starts at zero
+npx next start --port 3100               # production build only: dev mode has an HMR fetch cache
+for cell in a b c d e f; do
+  for i in 1 2 3; do curl -s "http://127.0.0.1:3100/cache-probe?cell=$cell"; done
+done
+curl -s http://127.0.0.1:4599/counts     # the answer
+```
+
+`curl`, not a browser: a browser hard refresh sends `cache-control: no-cache`, which makes `options.cache` and `options.next.*` ignored entirely.
+
+#### The matrix
+
+| Cell | `fetch` options | Requests sent | Upstream received | Cached? |
+|---|---|---|---|---|
+| a | `{ next: { revalidate: 60 } }` | 3 | **1** | yes |
+| b | `{ next: { revalidate: 60 }, signal: AbortSignal.timeout(5000) }` | 3 | **1** | yes |
+| c | `{ cache: "force-cache", next: { revalidate: 60 } }` | 3 | **1** | yes |
+| d | `{ cache: "force-cache", next: { revalidate: 60 }, signal: AbortSignal.timeout(5000) }` | 3 (then 6) | **1** | yes |
+| e *(control)* | *none* — the `auto no cache` default | 3 | **3** | no |
+| f *(control)* | `{ cache: "no-store" }` | 3 | **3** | no |
+
+Cells **e** and **f** are negative controls and are the reason the other four rows mean anything. Without them "everything cached" is indistinguishable from a broken harness that never reached the server twice. They hit the server on all three requests and their rendered `x-ratelimit-remaining` decremented 59 → 58 → 57, so the instrument demonstrably detects an uncached request. Cell **d** was then driven three further times and held at 1 upstream request across all six.
+
+#### What the counts answer
+
+- **Q1 — does `next: { revalidate: 60 }` alone cache? Yes.** This contradicts the premise of D-11a, which held that `revalidate` alone would not cache and that quota would burn on every render. Measured: a *positive* `next.revalidate` is itself an opt-in to the data cache. The docs' "by default, `fetch` requests are not cached" is about a request carrying **no** cache directive at all — that is cell **e**, which did burn a request every render. D-11a's premise is wrong; **its conclusion still stands**, for the reason in the decision below.
+- **Q2 — does `cache: 'force-cache'` change the answer? No.** Cell c matched cell a exactly. `force-cache` is not *required* for caching here; it is the explicit, documented spelling of it.
+- **Q3 — does an `AbortSignal` opt the request out of the data cache? No.** Cell b matched a, and cell d matched c. This was the open question in D-11b and the one that could have forced a choice between API-05 and OBS-02. It does not: **the timeout and the cache coexist with no trade-off.** The documented opt-out of *memoization* (the per-render dedupe) is unaffected by this finding and remains harmless here, since each endpoint is called once per render.
+- **Q4 — what do the rate-limit headers say on a cache hit? They are stale.** Every cached response rendered `x-ratelimit-remaining=59` — the value captured on the first call — while the upstream counter never advanced past 1. A cached response replays the headers from when it was stored.
+
+#### Consequences for the log line
+
+- **`rateLimitRemaining` from a cached response is historical, not live headroom.** This app's one leading indicator can therefore lie by omission: it goes quiet at the value it was cached with while real headroom is untouched (because no request was made) — or, after a revalidation, jumps. Read it as "headroom as of the last real call", never as current. It is still the right thing to log; it is not the right thing to alert on without knowing whether the call was served from cache.
+- **`cacheHit` stays `null`.** The measurement found no reliable in-process signal: on a cache hit the `Response` handed to application code was indistinguishable from a miss — same status, same headers, nothing added by the framework to discriminate. Inferring it from `durationMs` is **explicitly rejected**: a duration threshold silently misreports under load, and a wrong `cacheHit` is worse than an absent one because it looks authoritative. An absent field invites a question; a confidently wrong one ends the investigation in the wrong place.
+
+#### The decision — the fetch options Phase 1's `githubFetch` ships
+
+```ts
+fetch(url, {
+  cache: "force-cache",
+  next: { revalidate: revalidateSeconds }, // 60 for search, 300 for detail (D-09)
+  signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), // 5000 (OBS-02)
+});
+```
+
+All three options ship together, and cell **d** is exactly that configuration measured caching.
+
+`cache: "force-cache"` is kept even though cell a proves it is redundant, and the redundancy is the point. It is the spelling the Next docs name as *the* way to cache a request, it states the intent at the call site rather than requiring the reader to know that a positive `revalidate` implies caching, and it keeps the opt-in explicit if the `revalidate` value is ever changed to `0` or made conditional. The cost is one property; the failure it prevents is the silent, CI-passing, quota-burning uncached client that D-11a exists to prevent.
+
+No amendment to the resilience table below is needed: the timeout is still `AbortSignal.timeout()` and the abort signal is still propagated, because Q3 showed keeping both costs nothing.
+
 ## What gets logged
 
 Structured JSON, one object per event, written to stdout. Server-side only — Server Components already run on the server, so there is no client logging path to build.
