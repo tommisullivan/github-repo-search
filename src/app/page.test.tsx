@@ -13,6 +13,14 @@ vi.mock("@/lib/github/search", () => ({
   SEARCH_MAX_RESULTS: 1000,
 }));
 
+// SearchInput is a Client Component that reads useRouter; the page renders
+// it inside the search label. Provide a stub router so the page renders
+// during tests. This does not exercise the interactive input — that is
+// SearchInput.test.tsx's job.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+
 // Import AFTER the mock so the page picks up the mocked module.
 import Home from "./page";
 
@@ -73,6 +81,10 @@ describe("Home (search page)", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     // The results header shows the raw total.
     expect(screen.getByText(/42/)).toBeInTheDocument();
+    // Pagination is present alongside the result list (SRCH-04).
+    expect(
+      screen.getByRole("navigation", { name: /ページ移動/ })
+    ).toBeInTheDocument();
   });
 
   it("passes a non-default page through to the client and computes the correct range header", async () => {
@@ -105,6 +117,11 @@ describe("Home (search page)", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     // Not confusable with a results list: no listitem.
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    // Pagination is absent in the empty state — a user with no results has
+    // no page-2 to visit (SRCH-04).
+    expect(
+      screen.queryByRole("navigation", { name: /ページ移動/ })
+    ).toBeNull();
   });
 
   it("rate limit renders its own alert panel, never as 'no results'", async () => {
@@ -124,6 +141,10 @@ describe("Home (search page)", () => {
     expect(screen.queryByText(/該当するリポジトリが見つかりませんでした/)).toBeNull();
     // Not confusable with a result list.
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    // Pagination is absent in the rate-limited state.
+    expect(
+      screen.queryByRole("navigation", { name: /ページ移動/ })
+    ).toBeNull();
   });
 
   it("blank keyword renders the 'キーワードを入力してください' notice without a request", async () => {

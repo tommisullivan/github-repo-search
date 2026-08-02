@@ -20,8 +20,10 @@ import {
 } from "@/lib/github/search";
 import { EmptyState } from "@/components/EmptyState";
 import { InvalidQueryNotice } from "@/components/InvalidQueryNotice";
+import { Pagination } from "@/components/Pagination";
 import { RateLimitPanel } from "@/components/RateLimitPanel";
 import { ResultList } from "@/components/ResultList";
+import { SearchInput } from "@/components/SearchInput";
 
 /**
  * Derived from the exported client constants — never written as `50` literally.
@@ -74,9 +76,7 @@ export default async function Home({ searchParams }: SearchPageProps) {
 
       <label className="flex flex-col gap-2">
         <span className="text-sm">キーワード</span>
-        {/* Client-side interactive input lands in plan 02-03; this slot keeps
-            the DOM structure stable so the swap does not shift layout. */}
-        <div data-slot="search-input" />
+        <SearchInput initialQuery={q} />
       </label>
 
       {content}
@@ -116,7 +116,12 @@ async function renderSearchResults(q: string, page: number) {
     }
   }
 
-  const { items, totalCount, page: currentPage } = result.data;
+  const {
+    items,
+    totalCount,
+    page: currentPage,
+    hasNextPage,
+  } = result.data;
 
   if (items.length === 0) {
     return <EmptyState />;
@@ -126,12 +131,16 @@ async function renderSearchResults(q: string, page: number) {
   const end = start + items.length - 1;
   const currentSearchUrl = `/?q=${encodeURIComponent(q)}&page=${currentPage}`;
 
+  // Pagination lives only in the happy branch — a user on the empty,
+  // rate-limited, or invalid-query state has no page-2 to visit, so a
+  // disabled control there would be visual noise (SRCH-04).
   return (
     <div className="flex flex-col gap-4">
       <p className="px-6 text-sm text-zinc-600 dark:text-zinc-400">
         全 {totalCount.toLocaleString("ja-JP")} 件中 {start}〜{end} 件
       </p>
       <ResultList items={items} currentSearchUrl={currentSearchUrl} />
+      <Pagination q={q} page={currentPage} hasNextPage={hasNextPage} />
     </div>
   );
 }
