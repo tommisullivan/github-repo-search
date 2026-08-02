@@ -68,7 +68,7 @@ function levelFor(entry: GitHubCallLog): LogLevel {
 /**
  * Emits one JSON line per GitHub call.
  *
- * Always `console.log`, never `console.error`: OPERATIONS.md specifies a single
+ * Always `console.log`, never the error stream: OPERATIONS.md specifies a single
  * structured stream to stdout, so the level is a field, not a stream. Splitting
  * across stdout and stderr would interleave unpredictably and break the ordering
  * that makes `rateLimitRemaining` readable as a trend.
