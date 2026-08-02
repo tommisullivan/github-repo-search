@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed .planning/phases/01-github-api-client/01-03-PLAN.md
-last_updated: "2026-08-02T03:01:07.210Z"
+stopped_at: Completed .planning/phases/01-github-api-client/01-04-PLAN.md
+last_updated: "2026-08-02T03:12:07.737Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -26,26 +26,26 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 ## Current Position
 
 Phase: 1 of 4 (GitHub API Client) — Phase 0 complete
-Plan: 3 of 5 in current phase
-Status: Ready to execute 01-04 (search and repo units)
-Last activity: 2026-08-02 — Plan 01-03 complete: `githubFetch()` shipped with the measured cache opt-in, a 5s deadline, no retry on any response, one structured log line per attempt, and the origin guard. Confirmed end to end against a local counting server — 6 renders of a dynamic route, **1** upstream request
+Plan: 4 of 5 in current phase
+Status: Ready to execute 01-05 (docs sweep and phase gate)
+Last activity: 2026-08-02 — Plan 01-04 complete: `searchRepositories()` and `getRepository()` shipped, the two functions Phases 2 and 3 call. Blank keywords and pages past the 1000-result ceiling are refused before any request; watchers come from `subscribers_count`; both units return a `Result` **and may throw**. 52 new tests, 106 total, 100% coverage
 
-Progress: [██████░░░░] 60% (3 of 5 plans in Phase 1 complete)
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: ~18 min
-- Total execution time: 55 min
+- Total plans completed: 4
+- Average duration: ~19 min
+- Total execution time: 75 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 0. Foundation & CI | — | — | — |
-| 1. GitHub API Client | 3 | 55 min | ~18 min |
+| 1. GitHub API Client | 4 | 75 min | ~19 min |
 
 **Per plan:**
 
@@ -54,11 +54,12 @@ Progress: [██████░░░░] 60% (3 of 5 plans in Phase 1 complete
 | Phase 1 P01 | 12 min | 3 tasks | 5 files |
 | Phase 1 P02 | 18 min | 2 tasks | 1 file |
 | Phase 1 P03 | 25 min | 2 tasks | 3 files |
+| Phase 1 P04 | 20 min | 2 tasks | 4 files |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (12 min), 01-02 (18 min), 01-03 (25 min)
-- Trend: rising — 01-03 carried a live end-to-end confirmation (build, server, six driven requests, restore) on top of the code
+- Last 5 plans: 01-01 (12 min), 01-02 (18 min), 01-03 (25 min), 01-04 (20 min)
+- Trend: steady — 01-04 was two disjoint units against a settled client signature, so no exploration was needed
 
 *Updated after each plan completion*
 
@@ -89,11 +90,18 @@ Recent decisions affecting current work:
 - [Phase 1]: `GITHUB_API_BASE_URL` stays a hard-coded constant (T-01-26) — an env-settable base URL redirects the `Authorization` header, so the cache confirmation used a reverted source edit verified by `diff`
 - [Phase 1]: `durationMs` is reported as measured, never floored positive — a cache hit legitimately takes 0ms, which is also why `cacheHit` is not inferred from it
 - [Phase 1]: A requirement is marked Complete only when no remaining plan in the phase still claims it — API-03, OBS-02, OBS-03 close in 01-03; API-02, API-05, OBS-01, TEST-01 stay open for 01-04/01-05
+- [Phase 1]: 01-04: searchRepositories and getRepository each return a Result AND may throw GitHubRequestError — The units deliberately do not catch githubFetch. A transport fault, timeout or 5xx must reach error.tsx (D-03); catching it would convert an unexpected fault into a state the UI has no branch for. A Phase 2/3 caller handling only ok:false is incomplete.
+- [Phase 1]: 01-04: a page past the 1000-result ceiling returns INVALID_QUERY without a request — Page 51 begins at result 1001, so the request could only ever 422 (T-01-14). The bound is derived from SEARCH_MAX_RESULTS / SEARCH_PER_PAGE, never written as 50. It shares a code with the blank keyword, so Phase 2 must decide deliberately whether to distinguish 'refine your keyword' from 'that page does not exist' — only reachable by hand-editing the URL, since hasNextPage is clamped.
+- [Phase 1]: 01-04: repo.ts writes its own summary mapping rather than sharing search.ts's toRepoSummary — Importing across the two units is the boundary violation the ARCHITECTURE.md table forbids (T-01-17), and moving the helper into the types-only module to save ten assignments trades a clean boundary for a small one. RepoDetail extends RepoSummary, so a new field fails to compile in both units at once — drift is a build error, not a review catch.
 
 ### Pending Todos
 
 - **For 01-05:** `docs/ARCHITECTURE.md` still labels the client `githubFetch(path, init)` in two diagrams. The shipped signature is `githubFetch<T>({ path, endpoint, revalidate })`.
 - **For 01-05:** two `<verification>` greps inherited from 01-03 (`api.github.com` and `GITHUB_TOKEN` "in `client.ts` only") also match test files that assert the very thing being checked. Scope them to non-test files, or use `grep -rn "process.env" src/`, which matches `client.ts` alone.
+- **For 01-05:** 01-04 hit the same class again — the cross-unit-import grep matches each test file importing its own subject, and the `watchers_count` grep matches the explanatory comment the plan itself required. Three plans in a row: make "scope boundary greps to non-test, non-comment lines" a convention.
+- **For 01-05:** the README still needs the `subscribers_count` note the brief asks for (AGENTS.md § GitHub API rules). The reasoning is at `src/lib/github/repo.ts` and on `GitHubRepoDetailPayload`.
+- **For Phase 2:** `searchRepositories` returns `INVALID_QUERY` for **both** a blank keyword and a page past the 1000-result ceiling. The planned copy "refine your keyword" is wrong for the second. Only reachable by hand-editing the URL (`hasNextPage` is clamped), but decide deliberately — `SEARCH_PER_PAGE` and `SEARCH_MAX_RESULTS` are exported so the route can clamp.
+- **For Phases 2 and 3:** both units return a `Result` **and may throw** `GitHubRequestError`. Handling only `ok: false` is incomplete; the throw is D-03's path to `error.tsx`.
 
 ### Blockers/Concerns
 
@@ -114,8 +122,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T03:00:51.192Z
-Stopped at: Completed .planning/phases/01-github-api-client/01-02-PLAN.md — Task 3 is a blocking human checkpoint
+Last session: 2026-08-02T03:11:46.759Z
+Stopped at: Completed .planning/phases/01-github-api-client/01-04-PLAN.md
 Resume file: None
 
-Next: human sign-off on the measured fetch configuration in `docs/OPERATIONS.md`, then execute 01-03-PLAN.md (githubFetch). Plan 01-03 must not start until the checkpoint is resolved.
+Next: execute 01-05-PLAN.md — the docs sweep and Phase 1 gate. It closes SEC-03, TEST-01, API-02 and OBS-01, corrects the two `githubFetch(path, init)` diagram labels in `docs/ARCHITECTURE.md`, and adds the README note on `subscribers_count`.

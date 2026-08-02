@@ -7,11 +7,11 @@
 
 ### API Integration
 
-- [ ] **API-01**: Typed GitHub client wraps `search/repositories` and `repos/{owner}/{repo}` with explicit response types
+- [x] **API-01**: Typed GitHub client wraps `search/repositories` and `repos/{owner}/{repo}` with explicit response types
 - [ ] **API-02**: HTTP failures map to typed errors (rate limit, not found, validation, network) rather than raw throws
 - [x] **API-03**: Optional `GITHUB_TOKEN` read server-side only, never exposed to the client, documented in `.env.example`
-- [ ] **API-04**: Empty or whitespace-only queries are guarded before the request (GitHub returns 422, not an empty list)
-- [ ] **API-05**: Responses are cached via Next's fetch cache to reduce rate-limit pressure
+- [x] **API-04**: Empty or whitespace-only queries are guarded before the request (GitHub returns 422, not an empty list)
+- [x] **API-05**: Responses are cached via Next's fetch cache to reduce rate-limit pressure
 
 ### Search
 
@@ -127,11 +127,11 @@ Deferred. Tracked but not in the current roadmap.
 | I18N-01 | Phase 2 | Pending |
 | SEC-02 | Phase 3 | Pending |
 | SEC-01 | Phase 4 | Pending |
-| API-01 | Phase 1 | Pending |
+| API-01 | Phase 1 | Complete |
 | API-02 | Phase 1 | Pending |
 | API-03 | Phase 1 | Complete |
-| API-04 | Phase 1 | Pending |
-| API-05 | Phase 1 | Pending |
+| API-04 | Phase 1 | Complete |
+| API-05 | Phase 1 | Complete |
 | TEST-01 | Phase 1 | Pending |
 | SRCH-01 | Phase 2 | Pending |
 | SRCH-02 | Phase 2 | Pending |

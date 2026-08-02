@@ -108,7 +108,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 0. Foundation & CI | - | Complete | 2026-08-01 |
-| 1. GitHub API Client | 3/5 | In progress | - |
+| 1. GitHub API Client | 4/5 | In progress | - |
 | 2. Search Experience | 0/TBD | Not started | - |
 | 3. Repository Detail Page | 0/TBD | Not started | - |
 | 4. Quality Gate & Submission Readiness | 0/TBD | Not started | - |
