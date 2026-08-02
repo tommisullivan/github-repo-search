@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 ## Current Position
 
 Phase: 1 of 4 (GitHub API Client) — Phase 0 complete
-Plan: 1 of 5 in current phase
-Status: Executing
-Last activity: 2026-08-02 — Plan 01-01 complete: GitHub payload/domain types, the failure vocabulary with Result<T> and status mapping, and the structured call log. 21 tests, 100% coverage of the new modules, zero new dependencies
+Plan: 2 of 5 in current phase
+Status: Awaiting human sign-off on the 01-02 fetch-cache decision (blocking checkpoint)
+Last activity: 2026-08-02 — Plan 01-02 complete: Next 16.2.12's fetch cache measured against a local counting server on a production build. Cells a–d all cached (1 upstream request per 3); controls e/f did not (3 per 3). An AbortSignal does not opt out of the data cache, so API-05 and OBS-02 ship together with no trade-off
 
-Progress: [██░░░░░░░░] 20% (1 of 5 phases complete)
+Progress: [████░░░░░░] 40% (2 of 5 plans in Phase 1 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 12 min
-- Total execution time: 12 min
+- Total plans completed: 2
+- Average duration: 15 min
+- Total execution time: 30 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 0. Foundation & CI | — | — | — |
-| 1. GitHub API Client | 1 | 12 min | 12 min |
+| 1. GitHub API Client | 2 | 30 min | 15 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (12 min)
+- Last 5 plans: 01-01 (12 min), 01-02 (18 min)
 - Trend: —
 
 *Updated after each plan completion*
@@ -52,6 +52,10 @@ Recent decisions affecting current work:
 - [Phase 1 upcoming]: Every GitHub request carries a timeout — a bare `fetch()` has none and would hang a render
 - [Phase 1]: Expected failures are returned as `Result` values, unexpected faults are thrown as `GitHubRequestError` — `error.tsx` cannot branch reliably in production
 - [Phase 1]: `GitHubCallLog` is a closed type, so writing a token or a header bag to the log is a compile error rather than a review catch
+- [Phase 1]: `githubFetch` ships `cache: "force-cache"` + `next.revalidate` + `AbortSignal.timeout()` together — measured caching in Next 16.2.12, so API-05 and OBS-02 cost each other nothing
+- [Phase 1]: `force-cache` kept although measurement proved `revalidate` alone also caches — it is the documented opt-in and states intent at the call site
+- [Phase 1]: D-11a's premise measured false (`revalidate` alone does cache) while its conclusion stands — recorded in `docs/OPERATIONS.md`, not smoothed over
+- [Phase 1]: `cacheHit` stays `null` — a cache hit is indistinguishable from a miss to app code, and inferring it from `durationMs` is rejected as confidently wrong
 - [Phase 2 upcoming]: Japanese UI strings, English code — reviewers are Japanese engineers; code stays readable to any engineer
 - [Phase 3 upcoming]: `subscribers_count` for watchers — REST `watchers_count` duplicates stars
 
@@ -64,7 +68,7 @@ None yet.
 - Node 24.18.1 is required (`nvm use`). The machine default is Node 18, which is end-of-life and cannot run Next 16.
 - GitHub unauthenticated search is ~10 req/min. Manual verification will hit the limit; use a server-side token locally or mock.
 - No GitHub remote is configured — local-only by user instruction. CI requirements (Phase 0) are defined in-repo but cannot run until a remote exists.
-- Next's fetch cache means a cache hit performs no network call, so rate-limit headers read from a cached response are likely stale rather than current. Confirm the actual behaviour during Phase 1 before treating any logged value as live headroom.
+- ~~Next's fetch cache means a cache hit performs no network call, so rate-limit headers read from a cached response are likely stale rather than current.~~ **Resolved 2026-08-02 by plan 01-02's measurement: confirmed stale.** Every cached cell replayed `x-ratelimit-remaining=59` from its first call while the upstream counter never advanced. A logged headroom figure is historical, not live — log it, do not alert on it. See `docs/OPERATIONS.md`.
 - No LICENSE file. Considered and not selected; revisit before submission.
 
 ## Deferred Items
@@ -79,7 +83,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-08-02
-Stopped at: Completed .planning/phases/01-github-api-client/01-01-PLAN.md
+Stopped at: Completed .planning/phases/01-github-api-client/01-02-PLAN.md — Task 3 is a blocking human checkpoint
 Resume file: None
 
-Next: execute 01-02-PLAN.md (Next fetch cache measurement)
+Next: human sign-off on the measured fetch configuration in `docs/OPERATIONS.md`, then execute 01-03-PLAN.md (githubFetch). Plan 01-03 must not start until the checkpoint is resolved.
