@@ -109,9 +109,36 @@ UI 文言はすべて日本語、コード・コメント・コミットはす�
 
 **AI に委ねたこと。** 計画ドキュメント（要件・ロードマップ・フェーズごとの実装計画）の作成、GitHub クライアント・検索・詳細ページ・テスト・セキュリティヘッダーの実装、テストコードの作成（機能と同一 PR で、テストファーストの工程を含む）、設計ドキュメントの執筆と実測（Next.js の fetch キャッシュ挙動や CSP 違反は推測でなく計測で確認）。作業は GSD という構造化ワークフローで工程に分割し、各工程の完了時に AI 利用ログへ「何をしたか」だけでなく「なぜそうしたか」「却下した代替案とその理由」を記録しました。
 
-**人間が判断したこと。** データベース（MongoDB 提案)の却下、認証を作らないこと、DAST を行わないこと、観測ツールを無料・セルフホスト可能なものに限ること、UI を日本語・コードを英語とすること、AI 利用を工程ごとに両言語で記録すること、根拠が不明な場合は捏造せず人間に確認するというルール、そして**エージェントは決してマージしない**というルール。すべての PR は人間がレビューし、人間がマージしました。ライセンスファイルの選定も人間の判断事項として保留しています。
+**人間が判断したこと。** 認証を作らないこと、DAST を行わないこと、観測ツールを無料・セルフホスト可能なものに限ること、UI を日本語・コードを英語とすること、AI 利用を工程ごとに両言語で記録すること、根拠が不明な場合は捏造せず人間に確認するというルール、そして**エージェントは決してマージしない**というルール。すべての PR は人間がレビューし、人間がマージしました。ライセンスファイルの選定も人間の判断事項として保留しています。
+
+なお、**MongoDB を入れないという判断は AI の提案であり、人間の発案ではありません。** 本アプリは GitHub API への読み取り専用の中継であり永続化する状態を持たないため不要である、という理由を AI が示し、人間がそれを妥当と認めて承認しました。誰が何を決めたかを正確に残すため、ここは「人間が判断したこと」から外してあります。
 
 **どう検証したか。** 各フェーズの完了時に 7 つのゲートコマンド（`lint` / `typecheck` / `test:coverage` / `build` / `test:e2e` / `test:a11y` / `npm audit`）をすべて実行し、出力を読んだ上で結果をログに記録しました。AI の出力は主張であって検証済みの結果ではない、という原則を通しています。CI（lint・型検査・カバレッジ閾値付きテスト・ビルド・E2E・axe・CodeQL・シークレットスキャン）が全 PR をゲートします。
+
+### 開発ワークフロー — GSD Pi
+
+本プロジェクトの進め方は [**GSD Pi**](https://github.com/open-gsd/gsd-pi)（`@opengsd/gsd-pi`、v1.11.0）に沿っています。エージェントが長時間の作業でも全体像を見失わないようにするための、メタプロンプティングとコンテキスト設計、そして仕様駆動開発のためのシステムです。作業は**フェーズ**に分割され、各フェーズは「議論 → 計画 → 実装 → 検証」という同じ形をとり、その成果物（要件・ロードマップ・フェーズ計画・実装サマリー・レビュー）はすべて `.planning/` にコミットされます。本リポジトリの `.planning/` ディレクトリがその実物です。
+
+採用した理由は 4 つあります。
+
+1. **コードより先に計画を文書化させる。** 実装に入る前に方針をレビューできる。実装しながら方針が判明する、という進め方を避けられます。
+2. **課題が要求する監査証跡が副産物として残る。** 本課題は AI 利用を工程ごとに記録することを求めており、GSD Pi のフェーズ構造がその単位をそのまま与えてくれます。
+3. **AI の作業をレビュー可能な大きさに保つ。** フェーズ単位なら人間が実際に読める差分に収まります。巨大で不透明な 1 つの変更にはなりません。
+4. **セッションをまたいでも一貫する。** 状態が `.planning/` にあるため、新しいセッションが文脈を再構築せずに続きから作業できます。
+
+### Superpowers スキルとの併用（今後の可能性）
+
+もう 1 つの選択肢として **Superpowers** 系のスキル群があります（`test-driven-development`、`systematic-debugging`、`verification-before-completion`、`brainstorming`、`writing-plans` など。本リポジトリの [`AGENTS.md`](./AGENTS.md) でも一部を採用しています）。こちらは*一つひとつの作業のやり方*を規律づけるもので、GSD Pi が担う*プロジェクト全体の構造化*とは目的が異なります。
+
+**今回 GSD Pi を選んだのは、いま必要だったのが一貫性であり、TDD を全面的な手法として採る段階ではなかったからです。** 両者は排他ではありません。今後は GSD Pi をフェーズ管理の骨格として使いつつ、各フェーズの内側で TDD やデバッグのスキルを呼び出す、という組み合わせが自然です。骨格と作業手順はそれぞれ別の問題を解いています。
+
+### 今後の自動化の可能性（未実装）
+
+以下はいずれも**本プロジェクトでは実装していません。**現時点での構想として記載します。
+
+- **Jira / Notion などのプロジェクト管理ツールとの連携。** `.planning/` のフェーズとチケットは粒度がほぼ一致します。フェーズ作成時にチケットを起票し、PR のマージでステータスを更新し、AI 利用ログの該当エントリをチケットに添付すれば、監査証跡がリポジトリの外からも追えるようになります。現在は人間が両方を見比べています。
+- **CodeRabbit などの AI コードレビューとの連携。** PR に AI レビューアを接続すると、その指摘を人間だけでなくエージェントも読めるようになります。指摘を読む → 修正を適用する → 再度検証する、というループを自動化すれば、機械的な指摘は人間のレビュー前に片付きます。
+- **境界は変えません。** 自動化するのは修正の*提案*までです。本リポジトリの「**エージェントは決してマージしない**」という規則は変わりません。CI が緑であることは必要条件であって十分条件ではなく、その変更が正しい判断だったかを言えるのは人間だけです。
 
 ## 補足
 
@@ -226,9 +253,36 @@ This project was developed with extensive use of AI (Claude Code). The summary i
 
 **What was delegated to AI.** Writing the planning documents (requirements, roadmap, per-phase implementation plans); implementing the GitHub client, search, the detail page, tests, and the security headers; writing test code (in the same PR as each feature, including test-first cycles); and writing the design documents with real measurement — Next.js fetch-cache behaviour and CSP violations were counted and observed, not assumed. Work was split into processes under GSD, a structured workflow, and at the end of every process the AI usage log records not just *what* was done but *why*, including the alternatives rejected and the reasons.
 
-**What the human decided.** Rejecting a database (MongoDB was proposed); building no authentication; running no DAST; restricting observability tooling to free and self-hostable options; Japanese UI with English code; logging AI usage per process in both languages; the rule that an unknown rationale must be asked for, never invented; and the rule that **an agent never merges**. Every PR was reviewed and merged by a human. The choice of a LICENSE file also remains a flagged human decision.
+**What the human decided.** Building no authentication; running no DAST; restricting observability tooling to free and self-hostable options; Japanese UI with English code; logging AI usage per process in both languages; the rule that an unknown rationale must be asked for, never invented; and the rule that **an agent never merges**. Every PR was reviewed and merged by a human. The choice of a LICENSE file also remains a flagged human decision.
+
+For accuracy about who decided what: **leaving MongoDB out was the AI's proposal, not the human's.** The AI argued it was unnecessary — the app is a read-only pass-through to the GitHub API with no state to persist — and the human agreed and approved. It is listed here rather than above because attributing it to the human would overstate the human's role.
 
 **How it was verified.** At the close of every phase, all seven gate commands (`lint` / `typecheck` / `test:coverage` / `build` / `test:e2e` / `test:a11y` / `npm audit`) were run and their output read before the results were recorded in the log. The governing principle: an AI's output is a claim, not a verified result. CI (lint, typecheck, coverage-gated tests, build, E2E, axe, CodeQL, secret scanning) gates every PR.
+
+### Development workflow — GSD Pi
+
+The way this project was run follows [**GSD Pi**](https://github.com/open-gsd/gsd-pi) (`@opengsd/gsd-pi`, v1.11.0): a meta-prompting, context-engineering and spec-driven development system built so an agent can work for long stretches without losing the big picture. Work is split into **phases**, each taking the same shape — discuss → plan → execute → verify — and every artefact (requirements, roadmap, phase plans, implementation summaries, reviews) is committed under `.planning/`. The `.planning/` directory in this repository is that record.
+
+Four reasons it was chosen:
+
+1. **It forces a written plan before code.** The approach is reviewable before anything is implemented, rather than being discovered mid-build.
+2. **It produces the audit trail the brief demands as a by-product.** The assignment requires AI usage logged per process; GSD Pi's phase structure supplies exactly that unit.
+3. **It keeps AI work in reviewable chunks.** A phase is small enough for a human to actually read, instead of one large opaque change.
+4. **It stays consistent across sessions.** State lives in `.planning/`, so a new session resumes without re-deriving context.
+
+### Superpowers skills alongside GSD (a future possibility)
+
+The other approach available is the **Superpowers** family of skills — `test-driven-development`, `systematic-debugging`, `verification-before-completion`, `brainstorming`, `writing-plans` and others, some of which this repository's [`AGENTS.md`](./AGENTS.md) already adopts. Those discipline *how an individual piece of work is carried out*, which is a different problem from the *project-level structure* GSD Pi provides.
+
+**GSD Pi was chosen this time because what was needed was consistency, not a TDD-first method.** The two are not mutually exclusive. The natural next step is to keep GSD Pi as the phase-level skeleton while invoking the TDD and debugging skills *inside* each phase — skeleton and working method solve different problems.
+
+### Where this could go next (not implemented)
+
+None of the following is built in this project. It is recorded as intent, not as fact.
+
+- **Connecting to Jira, Notion or a similar project-management tool.** A phase in `.planning/` and a ticket are close to the same granularity. Creating a ticket when a phase is opened, updating its status when the PR merges, and attaching the matching AI-usage entry would make the audit trail followable from outside the repository. Today a human reconciles the two by eye.
+- **Connecting an AI code reviewer such as CodeRabbit to the PR.** With one attached, its findings become readable by an agent as well as a human — enabling a loop of read the finding, apply the fix, re-verify, so that mechanical comments are resolved before a human review begins.
+- **The boundary does not move.** Automation would extend only as far as *proposing* fixes. This repository's rule that **an agent never merges** stands. Green CI is necessary, not sufficient: only a human can say the change was the right call.
 
 ## Notes
 
