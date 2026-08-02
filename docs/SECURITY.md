@@ -25,7 +25,7 @@ Being honest about the attack surface is the first step, and here it is unusuall
 |---|---|---|---|
 | Search keyword → GitHub query string | User-controlled text sent upstream | Encode with `URLSearchParams`; never string-concatenate into a URL. Guard empty/whitespace before the request. Not a SQL/command context — the risk is a malformed request, not code execution | Phase 1 |
 | `owner` / `repo` route params | User-controlled path segments | `encodeURIComponent` per segment so a crafted value cannot escape the path and address a different endpoint | Phase 1 |
-| Rendered GitHub content (names, descriptions) | Third-party text in the DOM | React escapes by default. **`dangerouslySetInnerHTML` is banned in this repo** — there is no legitimate use for it here | Enforced by review |
+| Rendered GitHub content (names, descriptions) | Third-party text in the DOM | React escapes by default. **`dangerouslySetInnerHTML` is banned in this repo** — there is no legitimate use for it here | **Enforced by lint** (Phase 1) — `no-restricted-syntax` in `eslint.config.mjs`, proven to fire by `src/eslint-rules.test.ts` rather than by the rule's presence in a config file |
 | Owner avatar images | Remote images from GitHub | `next/image` requires an explicit `images.remotePatterns` allowlist. Scope it to GitHub's avatar host — not a wildcard | Phase 3 |
 | Optional `GITHUB_TOKEN` | Secret in the server environment | See below | Built |
 | Dependencies | Transitive supply chain | See below | Built |
