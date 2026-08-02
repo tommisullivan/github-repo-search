@@ -102,6 +102,24 @@ All three options ship together, and cell **d** is exactly that configuration me
 
 No amendment to the resilience table below is needed: the timeout is still `AbortSignal.timeout()` and the abort signal is still propagated, because Q3 showed keeping both costs nothing.
 
+#### Confirmed against the shipped client
+
+**Confirmed 2026-08-02.** Everything above measured a hand-written `fetch` in a probe route. This confirms the same behaviour of the **shipped `githubFetch()`**, which is a different claim: the options can be right and the function still not cache. Only this counted run satisfies API-05.
+
+A local Node counting server on `127.0.0.1:4599` served `/probe/confirm`. A temporary dynamic route awaited `searchParams` and called the real `githubFetch({ path: "/probe/confirm", endpoint: "search/repositories", revalidate: 60 })`. The build's route table confirmed `ƒ /cache-confirm` before anything was driven, and the probe server was restarted after the build so the counter started at zero — the build issued no probe requests either way.
+
+| | Count |
+|---|---|
+| Requests sent to the app | 6 (3, then 3 more) |
+| Requests received upstream | **1** |
+| `serverCount` rendered | `1` on all six |
+
+**One upstream request for six renders: the shipped client caches.** The three log lines from the first burst also show the Q4 finding as an operational fact rather than a prediction — `rateLimitRemaining: 59` was replayed identically on all three while the upstream counter never advanced past 1, and `durationMs` fell 26 → 1 → 0, which is exactly the signal that must **not** be turned into a `cacheHit` guess.
+
+The base URL was pointed at the probe by a **temporary one-line edit** to the `GITHUB_API_BASE_URL` constant in `src/lib/github/client.ts`, restored from a backup and verified byte-identical by `diff` at the end of the task.
+
+**It was deliberately not made configurable** — not by environment variable, not by a constructor argument, not by a test-only export (T-01-26). An env-settable base URL is a one-variable token-exfiltration path: anyone who can set an environment variable redirects the `Authorization` header, and the app's single secret, to a host they control. A reverted source edit buys identical test coverage and adds no attack surface, so the trade is not close. The next person who proposes the environment variable should find this paragraph before they ship it.
+
 ## What gets logged
 
 Structured JSON, one object per event, written to stdout. Server-side only — Server Components already run on the server, so there is no client logging path to build.
