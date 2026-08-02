@@ -39,8 +39,18 @@ export default defineConfig({
         "src/instrumentation.ts",
         "src/lib/e2e/**",
       ],
-      // Raised as real code lands — see .planning/ROADMAP.md Phase 4 (TEST-04).
-      thresholds: { lines: 70, functions: 70, branches: 70, statements: 70 },
+      // TEST-04 floor, set 2026-08-02 from the measured post-Phase-4 run:
+      // statements 96.38 / branches 94.11 / functions 92.59 / lines 96.34.
+      // The D4-10 target zone (90/90/85/80) measured >6 points loose on every
+      // metric, so each floor was tightened to sit ~4 points below actual.
+      // Functions keeps extra headroom on purpose: the denominator is small (54)
+      // and route-convention files (loading/error/not-found) only execute inside
+      // Next's runtime, so one honest new route segment moves the metric ~5-8
+      // points. The gate was proven to bind: lines=97 (above the 96.34 actual)
+      // failed the run with a threshold ERROR and exit 1 before this floor was
+      // committed. Never lower these values — raising is TEST-04, lowering is a
+      // regression by definition (Phase 4 scope fence, docs/TESTING.md).
+      thresholds: { lines: 92, functions: 85, branches: 90, statements: 92 },
     },
   },
 });
