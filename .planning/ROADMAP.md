@@ -65,6 +65,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Typing in the search input does not fire one request per keystroke
   5. Loading, empty results, network failure, and rate limiting each render a distinct, human-readable state — a rate limit is never shown as "no results", and no raw error or stack trace ever reaches the user
   6. Every user-facing string is Japanese — labels, placeholders, buttons, empty and error states, page titles, and `aria-label` values — while all code, comments, and commits remain English
+  7. Component tests cover the search form and result list on the happy path, and on the empty-result and rate-limited states — the two a user is most likely to hit
 **Plans**: TBD
 **UI hint**: yes
 
@@ -122,6 +123,27 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 4 | UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, SEC-01 | 7 |
 
 **Total:** 44 of 44 v1 requirements mapped. No orphans, no duplicates.
+
+## Definition of Done — every phase, without exception
+
+A phase is not complete until **all** of these hold. This is the testing gate: it applies uniformly, so no phase can quietly ship without tests because its own success criteria happened not to mention them.
+
+1. **Every requirement mapped to the phase is implemented**, and each one is demonstrable — not "the code is there", but observable behaviour.
+2. **Tests ship with the code**, in the same PR. Never a follow-up.
+   - New logic has unit tests, including each error branch.
+   - New UI has component tests for the happy path **and** for the failure states a user can actually reach.
+   - No test touches the live GitHub API.
+3. **The full local gate passes and the output was read**:
+   ```bash
+   npm run lint && npm run typecheck && npm run test:coverage && npm run build
+   npm run test:e2e && npm run test:a11y && npm audit --audit-level=high
+   ```
+4. **Coverage does not regress.** If the threshold is raised, it is raised deliberately, not tripped over.
+5. **`CI Gate` is green on the PR.**
+6. **Both AI usage logs are updated**, including the *why*.
+7. **A human has reviewed and merged.** An agent never merges its own work — see `AGENTS.md`.
+
+Phase-specific success criteria are *in addition to* this list, never instead of it.
 
 ## Constraints Carried Through Every Phase
 

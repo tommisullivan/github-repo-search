@@ -149,7 +149,22 @@ Full model in [`docs/SECURITY.md`](docs/SECURITY.md); the rules that bind code:
 3. **Verify locally before opening the PR** — see below. Do not delegate this to CI.
 4. Open the PR into `develop`. Fill in the template's verification section with the commands you ran and their real results.
 5. `CI Gate` must be green. A red or pending gate is not a merge candidate.
-6. Merge to `develop`. `main` receives changes only from `develop`, by PR.
+6. **Stop. A human merges.** See below.
+
+### Agents do not merge
+
+**Never run `gh pr merge`, never enable auto-merge, never push directly to a protected branch.** Opening the PR is where an agent's authority ends.
+
+Both conditions must hold before a merge, and only a human can confirm the second:
+
+1. **`CI Gate` is green.** Not pending, not "probably fine" — green.
+2. **A human has looked at the diff and said to merge**, in that session, for that PR.
+
+Green CI is necessary, not sufficient. It proves the code builds, types check, tests pass, and nothing scanned badly. It cannot tell you the change was a good idea, that it solves the right problem, or that it does not quietly contradict a decision recorded in `.planning/`. That judgement is the human's, and merging on a green pipeline alone skips it entirely.
+
+This is enforced, not merely promised: `gh pr merge` is blocked by a deny rule in `.claude/settings.json`, and repository auto-merge is disabled.
+
+When a PR is ready, say so and stop — report the CI result, summarise what changed, and wait.
 
 ### Verify before opening a PR — not after
 
