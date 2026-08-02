@@ -21,6 +21,13 @@ export default defineConfig({
         "src/**/*.{test,spec}.{ts,tsx}",
         "src/app/layout.tsx",
         "**/*.d.ts",
+        // The E2E GitHub API mock and the instrumentation hook that installs it
+        // are exercised by Playwright against the running server, not by Vitest.
+        // Counting them as uncovered source would distort the TEST-04 thresholds,
+        // and jsdom unit tests for a Playwright-only fixture server would be
+        // coverage theatre (D4-03).
+        "src/instrumentation.ts",
+        "src/lib/e2e/**",
       ],
       // Raised as real code lands — see .planning/ROADMAP.md Phase 4 (TEST-04).
       thresholds: { lines: 70, functions: 70, branches: 70, statements: 70 },

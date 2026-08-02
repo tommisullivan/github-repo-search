@@ -2,6 +2,16 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 3100;
 
+// Providing `env` to webServer replaces the default inheritance of the whole
+// process environment, so spread it back in — minus `undefined` values, which
+// the `{ [key: string]: string }` type (correctly) refuses.
+const inheritedEnv: { [key: string]: string } = {};
+for (const [key, value] of Object.entries(process.env)) {
+  if (value !== undefined) {
+    inheritedEnv[key] = value;
+  }
+}
+
 export default defineConfig({
   testDir: "./e2e",
   // a11y specs run as their own job in CI; keep them out of the default E2E run.
@@ -26,5 +36,10 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
+    // Activates the server-side GitHub API mock (src/instrumentation.ts) at
+    // `next start` time, for both the local build-and-start path and the CI
+    // PLAYWRIGHT_PREBUILT path — the flag matters at runtime, not build time,
+    // so the CI build job stays flag-free. No spec ever hits the live API.
+    env: { ...inheritedEnv, E2E_GITHUB_MOCK: "1" },
   },
 });
