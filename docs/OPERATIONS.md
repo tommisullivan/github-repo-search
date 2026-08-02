@@ -132,8 +132,8 @@ Structured JSON, one object per event, written to stdout. Server-side only — S
 
 | Field | Example | Note |
 |---|---|---|
-| `requestId` | `56476d64-…` | Generated **per GitHub call** with `crypto.randomUUID()`. Becomes per *inbound* request in Phase 2, when there are routes to correlate across. A retry shares the id of the call that produced it, so both attempts correlate |
-| `route` | — | **Deferred to Phase 2.** Phase 1 has no routes, so the field is omitted rather than filled with an invented value |
+| `requestId` | `56476d64-…` | Generated **per GitHub call** with `crypto.randomUUID()` — and that is the shipped v1 behaviour, by decision. A retry shares the id of the call that produced it, so both attempts correlate — and with one upstream and one GitHub call per user action, per-call correlation is the only correlation this app has needed. Threading a per-*inbound*-request id through would require opening the sealed `src/lib/github/` boundary; that is v2 work, if ever |
+| `route` | — | **Omitted, by decision.** The `endpoint` literal union already identifies which of the two calls logged, and with exactly two routes mapping 1:1 onto two endpoints, a `route` field would duplicate `endpoint` under another name. If a route ever serves more than one endpoint — or an endpoint more than one route — that 1:1 mapping breaks and this decision should be revisited |
 | `endpoint` | `search/repositories` or `repos/{owner}/{repo}` | A literal union — a typo fails the build |
 | `status` | `200`, `403`, `404`, `422`, or `null` | `null` when the request never completed |
 | `durationMs` | `142` — and legitimately `0` on a cache hit | Reported as measured, never floored to a positive number |
