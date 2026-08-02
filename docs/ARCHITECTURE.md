@@ -215,7 +215,12 @@ Three properties follow, and they are the reason the seams are drawn this way:
 2. **No cross-calling between units.** Search never reaches into repository detail and vice versa. A detail page loaded directly by URL performs exactly one GitHub read and needs no prior search.
 3. **Each unit is independently replaceable.** Swapping the search unit for the GraphQL API, or stubbing the repository unit in a test, touches one file and its type export. Nothing else in the tree has to change, because nothing else knows how either endpoint works.
 
-The rules are a code-review checklist, not decoration: an import of `search.ts` inside `repo.ts` (or of `client.ts` inside a component) is a boundary violation and should be rejected in review.
+**The rules are enforced by lint, not by review.** An import of `search.ts` inside `repo.ts`, of `repo.ts` inside `search.ts`, or of `client.ts` inside anything under `src/app/` or `src/components/` is a `no-restricted-imports` **error** and fails `npm run lint` and therefore CI — see the three `no-restricted-imports` entries in [`eslint.config.mjs`](../eslint.config.mjs). Review does not run in CI, and a boundary that depends on someone noticing is not a boundary.
+
+Two details of that enforcement are deliberate:
+
+- **`@/lib/github/errors` is not restricted from the presentation layer.** Phase 2 needs `GitHubFailure` to render its states. A rule that blocks legitimate work does not get narrowed by whoever it blocks — it gets deleted in full, taking the `client` restriction with it. A future phase that needs more should widen it deliberately.
+- **The rules are proven to fire**, by [`src/eslint-rules.test.ts`](../src/eslint-rules.test.ts), which lints real snippets through this repository's own config with `ESLint#lintText`. Grepping the config file for `no-restricted` would pass on a rule whose selector matches nothing — which is exactly how a lint rule fails — and a rule that never fires is worse than no rule, because it reads as covered. The suite includes two negative controls: a clean JSX snippet at the same path, and the permitted `errors` type import. Without them, a `files` glob that errors on everything would look identical to working protection.
 
 ## Request sequences
 
