@@ -9,7 +9,7 @@
 
 - [ ] **API-01**: Typed GitHub client wraps `search/repositories` and `repos/{owner}/{repo}` with explicit response types
 - [ ] **API-02**: HTTP failures map to typed errors (rate limit, not found, validation, network) rather than raw throws
-- [ ] **API-03**: Optional `GITHUB_TOKEN` read server-side only, never exposed to the client, documented in `.env.example`
+- [x] **API-03**: Optional `GITHUB_TOKEN` read server-side only, never exposed to the client, documented in `.env.example`
 - [ ] **API-04**: Empty or whitespace-only queries are guarded before the request (GitHub returns 422, not an empty list)
 - [ ] **API-05**: Responses are cached via Next's fetch cache to reduce rate-limit pressure
 
@@ -42,8 +42,8 @@
 ### Observability & Resilience
 
 - [ ] **OBS-01**: Every GitHub call is logged as structured JSON including status, duration, and `x-ratelimit-remaining` / `x-ratelimit-reset`
-- [ ] **OBS-02**: Every GitHub request carries a timeout; rate-limited and 4xx responses are never retried, transient network faults retry at most once
-- [ ] **OBS-03**: Tokens, `Authorization` headers, and full response bodies are never logged
+- [x] **OBS-02**: Every GitHub request carries a timeout; rate-limited and 4xx responses are never retried, transient network faults retry at most once
+- [x] **OBS-03**: Tokens, `Authorization` headers, and full response bodies are never logged
 
 ### Security
 
@@ -121,15 +121,15 @@ Deferred. Tracked but not in the current roadmap.
 | DOC-05 | Phase 0 | Complete |
 | DOC-06 | Phase 0 | Complete |
 | OBS-01 | Phase 1 | Pending |
-| OBS-02 | Phase 1 | Pending |
-| OBS-03 | Phase 1 | Pending |
+| OBS-02 | Phase 1 | Complete |
+| OBS-03 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Pending |
 | I18N-01 | Phase 2 | Pending |
 | SEC-02 | Phase 3 | Pending |
 | SEC-01 | Phase 4 | Pending |
 | API-01 | Phase 1 | Pending |
 | API-02 | Phase 1 | Pending |
-| API-03 | Phase 1 | Pending |
+| API-03 | Phase 1 | Complete |
 | API-04 | Phase 1 | Pending |
 | API-05 | Phase 1 | Pending |
 | TEST-01 | Phase 1 | Pending |

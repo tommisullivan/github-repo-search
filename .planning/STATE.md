@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+stopped_at: Completed .planning/phases/01-github-api-client/01-03-PLAN.md
+last_updated: "2026-08-02T03:01:07.210Z"
+last_activity: 2026-08-02
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 3
+  percent: 60
+---
+
 # Project State
 
 ## Project Reference
@@ -10,29 +26,39 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 ## Current Position
 
 Phase: 1 of 4 (GitHub API Client) — Phase 0 complete
-Plan: 2 of 5 in current phase
-Status: Awaiting human sign-off on the 01-02 fetch-cache decision (blocking checkpoint)
-Last activity: 2026-08-02 — Plan 01-02 complete: Next 16.2.12's fetch cache measured against a local counting server on a production build. Cells a–d all cached (1 upstream request per 3); controls e/f did not (3 per 3). An AbortSignal does not opt out of the data cache, so API-05 and OBS-02 ship together with no trade-off
+Plan: 3 of 5 in current phase
+Status: Ready to execute 01-04 (search and repo units)
+Last activity: 2026-08-02 — Plan 01-03 complete: `githubFetch()` shipped with the measured cache opt-in, a 5s deadline, no retry on any response, one structured log line per attempt, and the origin guard. Confirmed end to end against a local counting server — 6 renders of a dynamic route, **1** upstream request
 
-Progress: [████░░░░░░] 40% (2 of 5 plans in Phase 1 complete)
+Progress: [██████░░░░] 60% (3 of 5 plans in Phase 1 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 15 min
-- Total execution time: 30 min
+
+- Total plans completed: 3
+- Average duration: ~18 min
+- Total execution time: 55 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 0. Foundation & CI | — | — | — |
-| 1. GitHub API Client | 2 | 30 min | 15 min |
+| 1. GitHub API Client | 3 | 55 min | ~18 min |
+
+**Per plan:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 1 P01 | 12 min | 3 tasks | 5 files |
+| Phase 1 P02 | 18 min | 2 tasks | 1 file |
+| Phase 1 P03 | 25 min | 2 tasks | 3 files |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (12 min), 01-02 (18 min)
-- Trend: —
+
+- Last 5 plans: 01-01 (12 min), 01-02 (18 min), 01-03 (25 min)
+- Trend: rising — 01-03 carried a live end-to-end confirmation (build, server, six driven requests, restore) on top of the code
 
 *Updated after each plan completion*
 
@@ -58,10 +84,16 @@ Recent decisions affecting current work:
 - [Phase 1]: `cacheHit` stays `null` — a cache hit is indistinguishable from a miss to app code, and inferring it from `durationMs` is rejected as confidently wrong
 - [Phase 2 upcoming]: Japanese UI strings, English code — reviewers are Japanese engineers; code stays readable to any engineer
 - [Phase 3 upcoming]: `subscribers_count` for watchers — REST `watchers_count` duplicates stars
+- [Phase 1]: The shipped `githubFetch` caches — counted, not inferred: 6 renders of a dynamic route produced 1 upstream request against a local counting server
+- [Phase 1]: The origin guard rejects a leading backslash as well as a slash — `new URL("/\\host/x", base)` resolves to `https://host/x`, the same hijack one character away from the specified regex
+- [Phase 1]: `GITHUB_API_BASE_URL` stays a hard-coded constant (T-01-26) — an env-settable base URL redirects the `Authorization` header, so the cache confirmation used a reverted source edit verified by `diff`
+- [Phase 1]: `durationMs` is reported as measured, never floored positive — a cache hit legitimately takes 0ms, which is also why `cacheHit` is not inferred from it
+- [Phase 1]: A requirement is marked Complete only when no remaining plan in the phase still claims it — API-03, OBS-02, OBS-03 close in 01-03; API-02, API-05, OBS-01, TEST-01 stay open for 01-04/01-05
 
 ### Pending Todos
 
-None yet.
+- **For 01-05:** `docs/ARCHITECTURE.md` still labels the client `githubFetch(path, init)` in two diagrams. The shipped signature is `githubFetch<T>({ path, endpoint, revalidate })`.
+- **For 01-05:** two `<verification>` greps inherited from 01-03 (`api.github.com` and `GITHUB_TOKEN` "in `client.ts` only") also match test files that assert the very thing being checked. Scope them to non-test files, or use `grep -rn "process.env" src/`, which matches `client.ts` alone.
 
 ### Blockers/Concerns
 
@@ -82,7 +114,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02
+Last session: 2026-08-02T03:00:51.192Z
 Stopped at: Completed .planning/phases/01-github-api-client/01-02-PLAN.md — Task 3 is a blocking human checkpoint
 Resume file: None
 
