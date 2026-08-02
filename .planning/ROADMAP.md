@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: GitHub API Client** - One typed, server-side client with named errors, structured logging, and a timeout/retry policy (completed 2026-08-02)
 - [x] **Phase 2: Search Experience** - Japanese-language keyword search with URL-as-state and every result state handled (completed 2026-08-02)
 - [x] **Phase 3: Repository Detail Page** - A dedicated route showing all required repository fields, with an allowlisted avatar host (completed 2026-08-02)
-- [ ] **Phase 4: Quality Gate & Submission Readiness** - Accessibility, responsiveness, E2E coverage, and the reviewer-facing docs
+- [x] **Phase 4: Quality Gate & Submission Readiness** - Accessibility, responsiveness, E2E coverage, and the reviewer-facing docs (completed 2026-08-02)
 
 ## Phase Details
 
@@ -110,8 +110,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   6. `docs/AI-USAGE.ja.md` and `docs/AI-USAGE.en.md` carry identical per-process entries, and the README links to them
   7. `README.md` is bilingual with Japanese first, and carries a self-contained AI usage summary — how AI was used, what the human decided, how it was verified — so a reviewer reading only the README finds the report the brief asks for, not just links to it
   8. Security response headers are configured — including a Content-Security-Policy that does not fall back to `unsafe-inline` — so the deployed app is not relying on framework defaults alone
-**Plans**: 5 — 04-01 (server-side GitHub API mock + TEST-03 search-to-detail E2E journey) · 04-02 (UX-06/UX-07: per-state axe, keyboard-only journey, responsive assertions, description-null branch test) · 04-03 (SEC-01: nonce-based CSP via proxy.ts + static security headers, measured against the production build) · 04-04 (TEST-04: per-file coverage table fix, then deliberate threshold raise) · 04-05 (DOC-01/02/07/08: bilingual README, OPERATIONS reconciliation, Process 9, terminal DoD gate)
+**Plans**: 5 — 04-01 (server-side GitHub API mock + TEST-03 search-to-detail E2E journey) · 04-02 (UX-06/UX-07: per-state axe, keyboard-only journey, responsive assertions, description-null branch test) · 04-03 (SEC-01: nonce-based CSP via proxy.ts + static security headers, measured against the production build) · 04-04 (TEST-04: per-file coverage table fix, then deliberate threshold raise) · 04-05 (DOC-01/02/07/08: bilingual README, OPERATIONS reconciliation, Process 9, terminal DoD gate) — **all complete**
 **UI hint**: yes
+**Status**: Complete — all 9 requirements closed (UX-06, UX-07, TEST-03, TEST-04, SEC-01, DOC-01, DOC-02, DOC-07, DOC-08). 200 unit/component tests (50 new this phase), 17 E2E tests including the search→detail journey and six security-header specs, 7 per-state axe checks with zero violations, keyboard-only journey proven, no horizontal overflow at 375/1280. Coverage floor raised 70 → 92/90/85/92 from the measured run with a deliberate red-run proof (`lines: 97` → exit 1). All seven gate commands run and read in one session; `git diff --stat develop..HEAD -- package.json package-lock.json` empty — zero dependency changes across the phase. Caveats, recorded honestly in the established form:
+  - **`style-src` carries a measured, scoped concession — ladder rung 2, not rung 1.** `next/image` renders `style="color:transparent"` as an attribute, which no nonce can cover, so `style-src` adds `'unsafe-hashes'` plus the sha256 of that exact declaration. The measurement that forced it, and the openssl-verified hash, are in `docs/SECURITY.md`. `script-src` never contains `'unsafe-inline'` in any environment — the SEC-01 line held.
+  - **The static `/_not-found` renders under the CSP with its bootstrap scripts blocked** (prerendered before any nonce exists). Measured — 40 violation reports — and accepted: its content renders fully and it has no interactivity to lose. The designed not-found page lives inside the dynamic detail route and is violation-free.
+  - **The earlier phases' "never observed green in CI" caveat is resolved:** CI has since been observed green on `develop` for the Phase 1–3 merges (PRs #10, #13, #14). This phase's own PR gets its CI verdict at PR-open; the local seven-command gate passed in-session.
+  - **LICENSE remains a flagged human decision (D4-21)** — no plan adds the file; the merge itself is the human's (D4-20).
 
 ## Progress
 
@@ -124,7 +129,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. GitHub API Client | 5/5 | Complete   | 2026-08-02 |
 | 2. Search Experience | 3/3 | Complete   | 2026-08-02 |
 | 3. Repository Detail Page | 3/3 | Complete   | 2026-08-02 |
-| 4. Quality Gate & Submission Readiness | 0/5 | Planned | - |
+| 4. Quality Gate & Submission Readiness | 5/5 | Complete | 2026-08-02 |
 
 ## Coverage
 

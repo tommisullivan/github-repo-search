@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 2 shipped and merged (#14); Phase 3 rebased onto the merged Phase 2 — RateLimitPanel duplication resolved by renaming Phase 3's variant to RepoRateLimitPanel; PR #13 ready for human merge
-last_updated: "2026-08-02T14:15:00.000Z"
+status: milestone complete — awaiting human review and merge of the Phase 4 PR
+stopped_at: Phase 4 complete (all 5 plans); seven-command gate green in-session; PR from feature/phase-4-quality-gate into develop opened for human merge
+last_updated: "2026-08-02T06:50:00.000Z"
 last_activity: 2026-08-02
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
-  percent: 40
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -21,24 +21,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** A reviewer can search for a repository, open its detail page, and find the code behind it clear, correct, and production-minded — including when the GitHub API fails or rate-limits.
-**Current focus:** Phase 4 — Quality Gate & Submission Readiness (Phases 2 and 3 both complete)
+**Current focus:** Milestone v1.0 complete — Phase 4 PR open, awaiting human review and merge. LICENSE decision flagged to the human.
 
 ## Current Position
 
-Phase: 3 of 4 (Repository Detail Page) — **complete** and merged into develop is Phase 2 (PR #14); PR #13 for Phase 3 open with the rebase resolution against merged Phase 2 pushed
-Plan: 3 of 3 in current phase — all plans complete
-Status: Phase 3 code-complete on `feature/phase-3-detail`. Phase 2 merged first (PR #14); Phase 3 rebased onto it — the shared `RateLimitPanel` name went to Phase 2's search-tuned version, Phase 3's detail-tuned variant renamed to `RepoRateLimitPanel` and colocated in `src/components/`, and the detail page's import updated. Both AI usage log entries (Process 7 and Process 8) kept in the merge resolution, ordered 7 → 8.
-Last activity: 2026-08-02 — Phase 3 plans 03-01, 03-02, 03-03 complete: SEC-02 allowlist + `resolveBackTarget` guard; `<RepoDetail>` + `<RepoRateLimitPanel>` (renamed at rebase to distinguish from Phase 2's search-page `<RateLimitPanel>`); the `/repos/[owner]/[repo]` route with page-level tests asserting each `Result` branch. All seven gate commands run and read (150 tests pre-rebase, gate re-run after rebase — see PR #13 CI); Process 8 in both AI usage logs. All 8 Phase 3 requirements Complete.
+Phase: 4 of 4 (Quality Gate & Submission Readiness) — **complete**; all 46 v1 requirements Complete
+Plan: 5 of 5 in current phase — all plans complete
+Status: Phase 4 complete on `feature/phase-4-quality-gate`, executed as four waves in the main session (04-01 → {04-02, 04-03, 04-04} → 04-05). PR into `develop` opened for human merge — an agent never merges (D4-20).
+Last activity: 2026-08-02 — Phase 4 plans 04-01..04-05 complete: server-side GitHub API mock + TEST-03 journey; per-state axe (7 states, zero violations), keyboard-only journey, responsive assertions with one measured overflow fixed; nonce-based CSP at style-src ladder rung 2 with the four static security headers; coverage floor raised 70 → 92/90/85/92 with a red-run proof; bilingual Japanese-first README with the self-contained AI usage summary; OPERATIONS.md route/requestId reconciled; Process 9 in both AI usage logs (parity 9 = 9). All seven gate commands run and read in-session.
 
-Progress: [██████████] 100% (Phase 3 plans)
+Progress: [██████████] 100% (all phases, all plans)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 8
-- Average duration: ~15 min
-- Total execution time: 124 min
+- Total plans completed: 13
+- Average duration: ~15 min (where tracked)
+- Total execution time: 124 min tracked through Phase 3; Phase 4 per-plan durations were not individually recorded (waves in the main session)
 
 **By Phase:**
 
@@ -48,6 +48,7 @@ Progress: [██████████] 100% (Phase 3 plans)
 | 1. GitHub API Client | 5 | 94 min | ~19 min |
 | 2. Search Experience | 3 | 30 min | ~10 min |
 | 3. Repository Detail Page | 3 | 30 min | ~10 min |
+| 4. Quality Gate & Submission Readiness | 5 | not tracked per-plan | — |
 
 **Per plan:**
 
@@ -118,24 +119,24 @@ Recent decisions affecting current work:
 - ~~**For 01-05:** `docs/ARCHITECTURE.md` labels the client `githubFetch(path, init)` in two diagrams.~~ **Done in `bbfa68c`** — both diagrams now show `githubFetch({ path, endpoint, revalidate })`, with the reason stated: an `init` parameter would let a caller pass its own `cache` and silently undo API-05.
 - ~~**For 01-05:** verification greps that also match test files.~~ **Done** — all Phase 1 sweeps were scoped to non-test, non-comment lines and reported as such. Three checks could not be expressed as literally written; see 01-05-SUMMARY.md.
 - **Convention, now four plans running:** a boundary grep is written against **non-test, non-comment lines**, or it is written as a test. 01-05's own automated chain forbade a string that its own required deliverable had to contain (`dangerouslySetInnerHTML` in `src/eslint-rules.test.ts`). Where a check cannot express the real property, report it — do not weaken code to satisfy it.
-- **For Phase 4 (DOC-01):** the README still needs the `subscribers_count` note the brief asks for (AGENTS.md § GitHub API rules). The reasoning is at `src/lib/github/repo.ts`, on `GitHubRepoDetailPayload`, and now also in the Phase 3 `RepoDetail.tsx` header comment. Not added in Phase 3 either — splitting a single reasoning note across two commits (Phase 3's code + Phase 4's README) would put half the reasoning in each; Phase 4 DOC-01 owns it.
-- **For Phase 4 UX pass:** `RepoDetail.tsx`'s branch coverage is 100% for `language: null` but only 75% overall because `description: null` has no dedicated test. Trivially closable — add a fixture with `description: null` and assert it does not render. Left for Phase 4 UX-07's responsive/edge-case sweep to pick up.
+- ~~**For Phase 4 (DOC-01):** the README still needs the `subscribers_count` note the brief asks for (AGENTS.md § GitHub API rules).~~ **Done in Phase 4 (04-05)** — the bilingual README explains the `watchers_count`-duplicates-stars trap in full, in both language halves, consistent with the code-level comments at `src/lib/github/repo.ts` and `RepoDetail.tsx`.
+- ~~**For Phase 4 UX pass:** `RepoDetail.tsx`'s branch coverage is 100% for `language: null` but only 75% overall because `description: null` has no dedicated test.~~ **Done in Phase 4 (04-02)** — fixture with `description: null` added; asserts no empty `<p>` renders. `RepoDetail.tsx` at 100% branches in the final coverage run.
 - ~~**For Phase 4 (TEST-04):** the `text` coverage reporter prints an **empty per-file table** while the summary and threshold gate are correct (`skipFull` ruled out).~~ **Done in plan 04-04** — root cause: Vitest 4 injects `skipFull: true` into the text reporter's *per-reporter* options when it detects an AI-agent session (`std-env` `isAgent` via `CLAUDECODE`), and per-reporter options beat the top-level `--coverage.skipFull=false` flag, which is why the Phase 1 rule-out was wrong. Fixed with an explicit `["text", { skipFull: false }]`; thresholds then raised 70 → 92 stmts / 90 branches / 85 funcs / 92 lines from the measured run, with a red-run proof (lines=97 failed, exit 1). See `04-04-SUMMARY.md` and `docs/TESTING.md` § Coverage.
-- **For Phase 4:** `docs/OPERATIONS.md` marks `route` as deferred and `requestId` as per-GitHub-call. Both become fillable now every route is in place. Named gaps, not oversights.
+- ~~**For Phase 4:** `docs/OPERATIONS.md` marks `route` as deferred and `requestId` as per-GitHub-call.~~ **Done in Phase 4 (04-05)** — both rows now record the shipped v1 behaviour as decisions with reasons (per-call correlation is the only correlation the app has needed; `route` would duplicate the `endpoint` literal union). Doc-only per D4-18 — the sealed `src/lib/github/` boundary stays sealed; per-inbound-request threading is v2, if ever.
 - ~~**For Phase 2:** `searchRepositories` returns `INVALID_QUERY` for **both** a blank keyword and a page past the 1000-result ceiling.~~ **Done in Phase 2** — the page runs both guards *before* calling the client and picks distinct Japanese copy: "キーワードを入力してください" for blank, "検索できるページを超えています" for out-of-range. Asserted by `src/app/page.test.tsx` tests 5 and 6.
 - ~~**For Phases 2 and 3:** both units return a `Result` **and may throw** `GitHubRequestError`.~~ **Done for both** — Phase 2's search page and Phase 3's detail page both let `githubFetch` throws reach `error.tsx` unchanged. Asserted by tests in each phase's page test.
 - ~~**For Phase 3:** the detail page will need to parse `?from=<encoded url>` to render a "戻る" link back to the search view.~~ **Done in Phase 3** — `resolveBackTarget` decodes and validates the `from` param and the `<BackLink>` on `RepoDetail` renders it; 15 guard tests + open-redirect defence for `/\` and `//`.
 - ~~**For Phase 3:** the search page passes `<Link href={/repos/${owner}/${name}?from=...}>` from `ResultList`.~~ **Route exists.** Phase 3 shipped `/repos/[owner]/[repo]`, so the search links resolve.
-- **For Phase 4 (log numbering):** Process 7 = Phase 2, Process 8 = Phase 3. Merge conflict on the two log files was resolved on the Phase 3 branch by ordering 7 → 8 and inserting a `---` separator between them.
-- **For Phase 4 (E2E):** the E2E and a11y specs still exercise only the scaffold home page. TEST-03 (Phase 4) is where the real search-to-detail journey against a mocked GitHub API lands.
+- ~~**For Phase 4 (log numbering):** Process 7 = Phase 2, Process 8 = Phase 3.~~ **Resolved** — both entries stand in order 7 → 8, Process 9 (Phase 4) appended after; entry-count parity 9 = 9 across the two log files.
+- ~~**For Phase 4 (E2E):** the E2E and a11y specs still exercise only the scaffold home page.~~ **Done in Phase 4 (04-01/04-02)** — 17 E2E tests including the search→detail journey against the server-side mock, and 7 per-state axe checks.
 
 ### Blockers/Concerns
 
 - Node 24.18.1 is required (`nvm use`). The machine default is Node 18, which is end-of-life and cannot run Next 16.
 - GitHub unauthenticated search is ~10 req/min. Manual verification will hit the limit; use a server-side token locally or mock.
-- No GitHub remote is configured — local-only by user instruction. CI requirements (Phase 0) are defined in-repo but cannot run until a remote exists.
+- ~~No GitHub remote is configured — local-only by user instruction. CI requirements (Phase 0) are defined in-repo but cannot run until a remote exists.~~ **Stale — struck 2026-08-02.** The `origin` remote exists (`github.com/tommisullivan/github-repo-search`) and PRs #10, #13, #14 were merged through it with the CI workflow observed green on `develop` for each. The Phase 0–3 "defined and locally verified, not observed green in CI" caveat is thereby resolved by observed CI history.
 - ~~Next's fetch cache means a cache hit performs no network call, so rate-limit headers read from a cached response are likely stale rather than current.~~ **Resolved 2026-08-02 by plan 01-02's measurement: confirmed stale.** Every cached cell replayed `x-ratelimit-remaining=59` from its first call while the upstream counter never advanced. A logged headroom figure is historical, not live — log it, do not alert on it. See `docs/OPERATIONS.md`.
-- No LICENSE file. Considered and not selected; revisit before submission.
+- **FLAGGED HUMAN DECISION (D4-21): No LICENSE file.** Considered and deliberately not selected by an agent — choosing a licence for a selection-task submission is the owner's call. Raised at Phase 4 close in the 04-05 summary and the PR description. Decide before submission.
 
 ## Deferred Items
 
@@ -148,8 +149,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T14:15:00.000Z
-Stopped at: Phase 2 (PR #14) merged to develop; Phase 3 rebased on top and pushed; PR #13 ready for human merge. Rebase resolutions: keep both AI usage entries ordered 7 → 8; RateLimitPanel duplication resolved by renaming Phase 3's variant to RepoRateLimitPanel colocated in `src/components/`.
+Last session: 2026-08-02T06:50:00.000Z
+Stopped at: Phase 4 complete — all five plans executed, seven-command gate green in-session, Process 9 in both logs, PR from `feature/phase-4-quality-gate` into `develop` opened. Agent stopped at the PR boundary per D4-20.
 Resume file: None
 
-Next: human merges PR #13, then Phase 4 — Quality Gate & Submission Readiness (UX-06, UX-07, TEST-03, TEST-04, DOC-01, DOC-02, DOC-07, DOC-08, SEC-01).
+Next: human reviews and merges the Phase 4 PR, and decides the LICENSE question (flagged, D4-21). That closes milestone v1.0 — all 46 v1 requirements Complete.
