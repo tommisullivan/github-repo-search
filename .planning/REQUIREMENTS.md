@@ -23,11 +23,11 @@
 
 ### Detail
 
-- [ ] **DTL-01**: Selecting a repository navigates to its own route — a page, never a modal
-- [ ] **DTL-02**: Detail page shows name, owner avatar, language, stars, watchers, forks, and open issues
-- [ ] **DTL-03**: Watcher count uses `subscribers_count`, with the REST `watchers_count` duplication documented
-- [ ] **DTL-04**: A detail URL can be opened directly or refreshed and renders correctly
-- [ ] **DTL-05**: User can navigate back to results without losing their search
+- [x] **DTL-01**: Selecting a repository navigates to its own route — a page, never a modal
+- [x] **DTL-02**: Detail page shows name, owner avatar, language, stars, watchers, forks, and open issues
+- [x] **DTL-03**: Watcher count uses `subscribers_count`, with the REST `watchers_count` duplication documented (rendered; the README note is deferred to Phase 4 DOC-01 to keep the reasoning in one commit)
+- [x] **DTL-04**: A detail URL can be opened directly or refreshed and renders correctly
+- [x] **DTL-05**: User can navigate back to results without losing their search
 
 ### UX & Resilience
 
@@ -35,7 +35,7 @@
 - [x] **UX-02**: Empty-result state that tells the user what to do next
 - [x] **UX-03**: Network and API failures render a usable error state — never a raw error or stack trace
 - [x] **UX-04**: Rate limiting (403/429) is identified specifically, not shown as "no results"
-- [ ] **UX-05**: Unknown owner/repo renders a not-found page
+- [x] **UX-05**: Unknown owner/repo renders a not-found page
 - [ ] **UX-06**: Keyboard operable with labelled controls and correct heading structure
 - [ ] **UX-07**: Layout works on mobile and desktop widths
 
@@ -48,7 +48,7 @@
 ### Security
 
 - [ ] **SEC-01**: Security response headers configured, including a Content-Security-Policy that does not rely on `unsafe-inline`
-- [ ] **SEC-02**: `images.remotePatterns` allowlists GitHub's avatar host specifically, never a wildcard
+- [x] **SEC-02**: `images.remotePatterns` allowlists GitHub's avatar host specifically, never a wildcard
 - [x] **SEC-03**: URLs are built with `URLSearchParams` / `encodeURIComponent`; `dangerouslySetInnerHTML` appears nowhere
 
 ### Localisation
@@ -58,7 +58,7 @@
 ### Testing
 
 - [x] **TEST-01**: Unit tests for the GitHub client including every error-mapping branch
-- [ ] **TEST-02**: Component tests for search and detail covering happy path plus at least one failure path each
+- [x] **TEST-02**: Component tests for search and detail covering happy path plus at least one failure path each (detail half complete in Phase 3; the search half is Phase 2's, running in parallel)
 - [ ] **TEST-03**: E2E test covering search → detail navigation, with the GitHub API mocked
 - [ ] **TEST-04**: Coverage threshold enforced in CI
 
@@ -125,7 +125,7 @@ Deferred. Tracked but not in the current roadmap.
 | OBS-03 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
 | I18N-01 | Phase 2 | Complete |
-| SEC-02 | Phase 3 | Pending |
+| SEC-02 | Phase 3 | Complete |
 | SEC-01 | Phase 4 | Pending |
 | API-01 | Phase 1 | Complete |
 | API-02 | Phase 1 | Complete |
@@ -142,13 +142,13 @@ Deferred. Tracked but not in the current roadmap.
 | UX-02 | Phase 2 | Complete |
 | UX-03 | Phase 2 | Complete |
 | UX-04 | Phase 2 | Complete |
-| DTL-01 | Phase 3 | Pending |
-| DTL-02 | Phase 3 | Pending |
-| DTL-03 | Phase 3 | Pending |
-| DTL-04 | Phase 3 | Pending |
-| DTL-05 | Phase 3 | Pending |
-| UX-05 | Phase 3 | Pending |
-| TEST-02 | Phase 3 | Pending |
+| DTL-01 | Phase 3 | Complete |
+| DTL-02 | Phase 3 | Complete |
+| DTL-03 | Phase 3 | Complete |
+| DTL-04 | Phase 3 | Complete |
+| DTL-05 | Phase 3 | Complete |
+| UX-05 | Phase 3 | Complete |
+| TEST-02 | Phase 3 | Complete |
 | UX-06 | Phase 4 | Pending |
 | UX-07 | Phase 4 | Pending |
 | TEST-03 | Phase 4 | Pending |
@@ -175,4 +175,4 @@ Deferred. Tracked but not in the current roadmap.
 
 ---
 *Requirements defined: 2026-08-01*
-*Last updated: 2026-08-01 after roadmap creation*
+*Last updated: 2026-08-02 after Phase 3 close (DTL-01..05, UX-05, TEST-02, SEC-02 marked Complete)*

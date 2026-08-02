@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 0: Foundation & CI** - Architecture, operations, security and testing documentation, plus the full CI quality gate (delivered during initialization)
 - [x] **Phase 1: GitHub API Client** - One typed, server-side client with named errors, structured logging, and a timeout/retry policy (completed 2026-08-02)
 - [x] **Phase 2: Search Experience** - Japanese-language keyword search with URL-as-state and every result state handled (completed 2026-08-02)
-- [ ] **Phase 3: Repository Detail Page** - A dedicated route showing all required repository fields, with an allowlisted avatar host
+- [x] **Phase 3: Repository Detail Page** - A dedicated route showing all required repository fields, with an allowlisted avatar host (completed 2026-08-02)
 - [ ] **Phase 4: Quality Gate & Submission Readiness** - Accessibility, responsiveness, E2E coverage, and the reviewer-facing docs
 
 ## Phase Details
@@ -89,8 +89,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. User can return to the results list with their keyword and page intact
   6. Component tests cover search and detail on the happy path and on at least one failure path each
   7. Owner avatars load through an `images.remotePatterns` allowlist scoped to GitHub's avatar host specifically — never a wildcard, so the app cannot be made to proxy arbitrary remote images
-**Plans**: TBD
+**Plans**: 3 — 03-01 (SEC-02 avatar host allowlist + resolveBackTarget guard) · 03-02 (`<RepoDetail>` + `<RateLimitPanel>` with colocated tests) · 03-03 (the `/repos/[owner]/[repo]` route with page-level tests asserting each `Result` branch) — **all complete**
 **UI hint**: yes
+**Status**: Complete — all 8 requirements closed (DTL-01..05, UX-05, TEST-02 detail half, SEC-02); 150 tests total (37 new: 15 backTarget + 10 RepoDetail + 5 RateLimitPanel + 7 page); aggregate 96.44% lines / 95.78% branches / 87.5% functions; zero new production dependencies across the phase; `git diff --stat develop..HEAD -- package.json package-lock.json` empty. Build now emits `ƒ /repos/[owner]/[repo]` — DTL-01's proof. Caveats:
+  - **DTL-03 has two parts**; the render half and the code-level trap ship with this phase, the README note belongs to Phase 4 DOC-01 and was deliberately not written here (splitting it would put half a note in each commit).
+  - **E2E and a11y still exercise only the scaffold home page.** Real search→detail E2E is TEST-03, Phase 4.
+  - Same "defined and locally verified, not observed green in CI" caveat Phase 0 and Phase 1 recorded — no GitHub remote is configured.
+  - Parallel Phase 2 worktree owns Process 7 in the AI usage log; conflict at PR merge is expected and both entries stand.
 
 ### Phase 4: Quality Gate & Submission Readiness
 **Goal**: The repository reads as production work to a reviewing engineer — accessible, responsive, covered, and explained
@@ -118,7 +123,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 0. Foundation & CI | - | Complete | 2026-08-01 |
 | 1. GitHub API Client | 5/5 | Complete   | 2026-08-02 |
 | 2. Search Experience | 3/3 | Complete   | 2026-08-02 |
-| 3. Repository Detail Page | 0/TBD | Not started | - |
+| 3. Repository Detail Page | 3/3 | Complete   | 2026-08-02 |
 | 4. Quality Gate & Submission Readiness | 0/TBD | Not started | - |
 
 ## Coverage
