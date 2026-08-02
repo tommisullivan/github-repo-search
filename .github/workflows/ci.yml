@@ -86,7 +86,7 @@ jobs:
       - run: npm ci
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: next-build
           path: .next
@@ -125,7 +125,7 @@ jobs:
       - run: npm ci
 
       - name: Download build output
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: next-build
           path: .next
