@@ -110,7 +110,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   6. `docs/AI-USAGE.ja.md` and `docs/AI-USAGE.en.md` carry identical per-process entries, and the README links to them
   7. `README.md` is bilingual with Japanese first, and carries a self-contained AI usage summary — how AI was used, what the human decided, how it was verified — so a reviewer reading only the README finds the report the brief asks for, not just links to it
   8. Security response headers are configured — including a Content-Security-Policy that does not fall back to `unsafe-inline` — so the deployed app is not relying on framework defaults alone
-**Plans**: TBD
+**Plans**: 5 — 04-01 (server-side GitHub API mock + TEST-03 search-to-detail E2E journey) · 04-02 (UX-06/UX-07: per-state axe, keyboard-only journey, responsive assertions, description-null branch test) · 04-03 (SEC-01: nonce-based CSP via proxy.ts + static security headers, measured against the production build) · 04-04 (TEST-04: per-file coverage table fix, then deliberate threshold raise) · 04-05 (DOC-01/02/07/08: bilingual README, OPERATIONS reconciliation, Process 9, terminal DoD gate)
 **UI hint**: yes
 
 ## Progress
@@ -124,7 +124,7 @@ Phases execute in numeric order: 0 → 1 → 2 → 3 → 4
 | 1. GitHub API Client | 5/5 | Complete   | 2026-08-02 |
 | 2. Search Experience | 3/3 | Complete   | 2026-08-02 |
 | 3. Repository Detail Page | 3/3 | Complete   | 2026-08-02 |
-| 4. Quality Gate & Submission Readiness | 0/TBD | Not started | - |
+| 4. Quality Gate & Submission Readiness | 0/5 | Planned | - |
 
 ## Coverage
 
